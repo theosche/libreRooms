@@ -54,7 +54,7 @@
                         type="url"
                         id="APP_URL"
                         name="APP_URL"
-                        value="{{ old('APP_URL', !empty($config['APP_URL']) ? $config('APP_URL') : ($protocol . "://" . $_SERVER['HTTP_HOST'])) }}"
+                        value="{{ old('APP_URL', !empty($config['APP_URL']) ? $config['APP_URL'] : ($protocol . "://" . $_SERVER['HTTP_HOST'])) }}"
                         required
                         placeholder="https://reservations.example.com"
                     >
