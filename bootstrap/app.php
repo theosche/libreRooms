@@ -21,4 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EnsureSetupComplete::class,
             \App\Http\Middleware\EnsureSystemSettingsConfigured::class,
         ]);
+    })->withExceptions(function (Exceptions $exceptions): void {
+        //
     })->create();
