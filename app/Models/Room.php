@@ -1,0 +1,164 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\EmbedCalendarModes;
+use App\Enums\ExternalSlotProviders;
+use App\Services\Settings\SettingsService;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Enums\PriceModes;
+use App\Enums\CharterModes;
+use App\Enums\CalendarViewModes;
+use App\Enums\RoomUserRoles;
+
+class Room extends Model
+{
+    /** @use HasFactory<\Database\Factories\RoomFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'owner_id',
+        'name',
+        'slug',
+        'description',
+        'active',
+        'is_public',
+        'price_mode',
+        'price_short',
+        'price_full_day',
+        'max_hours_short',
+        'always_short_after',
+        'always_short_before',
+        'allow_late_end_hour',
+        'reservation_cutoff_days',
+        'reservation_advance_limit',
+        'use_special_discount',
+        'use_donation',
+        'charter_mode',
+        'charter_str',
+        'custom_message',
+        'secret_message',
+        'external_slot_provider',
+        'dav_calendar',
+        'embed_calendar_mode',
+        'calendar_view_mode',
+        'timezone',
+        'disable_mailer',
+    ];
+
+    protected $casts = [
+        'active' => 'boolean',
+        'is_public' => 'boolean',
+        'price_mode' => PriceModes::class,
+        'use_special_discount' => 'boolean',
+        'use_donation' => 'boolean',
+        'charter_mode' => CharterModes::class,
+        'secret_message' => 'encrypted',
+        'embed_calendar_mode' => EmbedCalendarModes::class,
+        'calendar_view_mode' => CalendarViewModes::class,
+        'external_slot_provider' => ExternalSlotProviders::class,
+        'disable_mailer' => 'boolean',
+    ];
+
+    public function getTimezone(): string {
+        return app(SettingsService::class)->timezone(room: $this);
+    }
+
+    public function getCurrency(): string {
+        return app(SettingsService::class)->currency($this->owner);
+    }
+
+    public function getLocale(): string {
+        return app(SettingsService::class)->locale($this->owner);
+    }
+
+    public function usesCaldav(): bool
+    {
+        return $this->external_slot_provider === ExternalSlotProviders::CALDAV
+            && $this->dav_calendar
+            && $this->owner->use_caldav
+            && $this->owner->caldavSettings()->valid();
+    }
+
+    public function usesWebdav(): bool
+    {
+        return $this->owner->usesWebdav();
+    }
+
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(Owner::class);
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function discounts(): HasMany
+    {
+        return $this->hasMany(RoomDiscount::class);
+    }
+
+    public function options(): HasMany
+    {
+        return $this->hasMany(RoomOption::class);
+    }
+
+    public function customFields(): HasMany
+    {
+        return $this->hasMany(CustomField::class);
+    }
+
+    /**
+     * Users with direct access to this room (via room_user pivot).
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if the room is accessible by the given user.
+     * Public rooms are accessible by everyone.
+     * Private rooms require: global_admin, owner role, or direct room access.
+     */
+    public function isAccessibleBy(?User $user): bool
+    {
+        if ($this->is_public) {
+            return true;
+        }
+        if (! $user) {
+            return false;
+        }
+        if ($user->is_global_admin) {
+            return true;
+        }
+        // Check if user has any role on the owner
+        if ($user->owners()->where('owners.id', $this->owner_id)->exists()) {
+            return true;
+        }
+        // Check if user has direct access to this room
+        return $this->users()->where('users.id', $user->id)->exists();
+    }
+
+    public function shortPriceRuleLabel() {
+        if (!$this->price_short || !$this->max_hours_short) {
+            return "";
+        }
+        $rules = ["≤ " . $this->max_hours_short . "h"];
+        if ($this->always_short_before) {
+            $rules[] = "avant " . $this->always_short_before . "h";
+        }
+        if ($this->always_short_after) {
+            $rules[] = "après " . $this->always_short_after . "h";
+        }
+        return implode(", ", $rules);
+    }
+}

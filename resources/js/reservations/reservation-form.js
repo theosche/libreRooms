@@ -1,0 +1,620 @@
+import { DateTime } from 'luxon';
+
+// Compteur global pour les IDs uniques d'événements
+// Initialisé côté PHP dans create.blade.php
+let nextEventId = window.ResEvents.length;
+let eventsSlots = [];
+const Status = Object.freeze({
+    UNSET: "unset",
+    FREE: "free",
+    BUSY: "busy",
+    PAST: "past",
+    TOO_CLOSE: "too-close",
+    TOO_FAR: "too-far",
+    INVALID: "invalid",
+    OVERLAP: "overlap",
+    label(type) {
+        switch (type) {
+            case this.UNSET:
+                return 'Vide';
+            case this.FREE:
+                return 'Disponible';
+            case this.BUSY:
+                return 'Occupé';
+            case this.PAST:
+                return 'Passé';
+            case this.TOO_CLOSE:
+                return 'Trop proche';
+            case this.TOO_FAR:
+                return 'Trop loin';
+            case this.INVALID:
+                return 'Invalide';
+            case this.OVERLAP:
+                return 'Chevauchement';
+            default:
+                return null;
+        }
+    }
+});
+
+function currency(amount) {
+    return new Intl.NumberFormat(window.RoomConfig.settings.locale,{
+        style: 'currency',
+        currency: window.RoomConfig.settings.currency,
+    }).format(amount);
+}
+
+function removeEvent(ev) {
+    const index = window.ResEvents.indexOf(ev);
+    window.ResEvents[index].eventRow.remove();
+    if (index !== -1) {
+        window.ResEvents.splice(index, 1);
+    }
+    updateTotalCost();
+}
+
+function addEvent() {
+    const newEventId = nextEventId++;
+    // Cloner le template
+    const template = document.getElementById('new-event-row');
+    const clone = template.content.cloneNode(true);
+
+    const eventRow = clone.querySelector('.event-row');
+    eventRow.setAttribute('data-event-id', newEventId);
+
+    // Remplacer dans tous les attributs contenant __INDEX__
+    const elementsWithIndex = eventRow.querySelectorAll('[name*="__INDEX__"], [id*="__INDEX__"], [for*="__INDEX__"]');
+
+    elementsWithIndex.forEach(element => {
+        if (element.hasAttribute('name')) {
+            element.setAttribute('name', element.getAttribute('name').replace(/__INDEX__/g, String(newEventId)));
+        }
+        if (element.hasAttribute('id')) {
+            element.setAttribute('id', element.getAttribute('id').replace(/__INDEX__/g, String(newEventId)));
+        }
+        if (element.hasAttribute('for')) {
+            element.setAttribute('for', element.getAttribute('for').replace(/__INDEX__/g, String(newEventId)));
+        }
+    });
+
+    document.getElementById('events-container').appendChild(eventRow);
+
+    // Ajouter aux tableaux
+    const ev = {
+        id: newEventId,
+        start: '',
+        end: '',
+        uid: '',
+        options: [],
+        status: Status.UNSET,
+        price: 0,
+        eventRow: eventRow,
+    };
+    window.ResEvents.push(ev);
+
+    // Attacher le listener de suppression
+    const removeBtn = eventRow.querySelector('.event-remove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => removeEvent(ev));
+    }
+}
+
+function linkDOMToArrays() {
+    window.ResEvents.forEach((ev) => {
+        ev.eventRow = document.querySelector(`[data-event-id="${ev.id}"]`);
+    });
+    window.RoomConfig.discounts.forEach((disc) => {
+        disc.discountInput = document.getElementById("discount_" + disc.id);
+        disc.discountSummary = document.getElementById("discount_" + disc.id + "-cost");
+    })
+}
+
+// Initialiser les listeners pour ajouter/supprimer des événements
+function initAddRemoveEvent() {
+    window.ResEvents.forEach((ev) => {
+        document.querySelector("#event-remove-" + ev.id).addEventListener('click', () => removeEvent(ev));
+    });
+
+    const addEventBtn = document.getElementById('add-event');
+    if (addEventBtn) {
+        addEventBtn.addEventListener('click', addEvent);
+    }
+}
+
+function roomTzDate(str) {
+    return DateTime.fromISO(str,{zone:window.RoomConfig.settings.timeZone})
+}
+function updateAvailability(ev) {
+    const start = ev.eventRow.querySelector('.event-start').value;
+    ev.start = start ? roomTzDate(start) : '';
+    const end = ev.eventRow.querySelector('.event-end').value;
+    ev.end = end ? roomTzDate(end) : '';
+
+    const now = DateTime.now();
+    if (!ev.start || !ev.end) {
+        ev.status = Status.UNSET;
+    } else if (ev.end < ev.start) {
+        ev.status = Status.INVALID;
+    } else if (now > ev.start) {
+        ev.status = Status.PAST;
+    } else if (window.RoomConfig.settings.reservation_cutoff_days &&
+        ev.start - now < window.RoomConfig.settings.reservation_cutoff_days * 1000 * 3600 * 24) {
+        ev.status = Status.TOO_CLOSE;
+    } else if (window.RoomConfig.settings.reservation_advance_limit &&
+        ev.start - now > window.RoomConfig.settings.reservation_advance_limit * 1000 * 3600 * 24) {
+        ev.status = Status.TOO_FAR;
+    } else if (hasOverlapWithOtherEvents(ev)) {
+        ev.status = Status.OVERLAP;
+    } else {
+        ev.status = checkAvailability(ev.start,ev.end,ev.uid) ? Status.FREE : Status.BUSY;
+    }
+    const span = document.querySelector("#event-status-" + ev.id);
+    span.textContent = Status.label(ev.status);
+    span.classList.remove(...span.classList);
+    span.classList.add("status-label", "status-" + ev.status);
+}
+
+function checkAvailability(startDateTime, endDateTime, self_uid=null) {
+    let conflict;
+    conflict = eventsSlots.some(function(event, index) {
+        return (
+            (startDateTime < event.end && endDateTime > event.start && (self_uid ? event.uid != self_uid : true)) // Chevauchement
+        );
+    });
+    return !conflict; // Retourne true si disponible, false sinon
+}
+
+function hasOverlapWithOtherEvents(currentEv) {
+    // Check if current event overlaps with any other event in the same reservation
+    return window.ResEvents.some(function(otherEv) {
+        if (otherEv.id === currentEv.id) {
+            return false; // Skip self
+        }
+        if (!otherEv.start || !otherEv.end) {
+            return false; // Skip events without dates
+        }
+        // Check overlap: start1 < end2 AND end1 > start2
+        return currentEv.start < otherEv.end && currentEv.end > otherEv.start;
+    });
+}
+async function initAvailabilityCheck() {
+    try {
+        const response = await fetch(window.RoomConfig.settings.availability_route);
+        const data = await response.json();
+
+        // Store full calendar events data globally for calendar display
+        window.calendarEventsData = data;
+
+        eventsSlots = data.map(slot => ({
+            start: roomTzDate(slot.start),
+            end: roomTzDate(slot.end),
+            uid: slot.uid
+        }));
+    } catch (error) {
+        console.error('Erreur lors du chargement du calendrier :', error);
+    }
+}
+
+function updateOption(ev,optionId,checked) {
+    if (checked) {
+        if (!ev.options.includes(optionId)) {
+            ev.options.push(optionId);
+        }
+    } else {
+        const index = ev.options.indexOf(optionId);
+        if (index !== -1) {
+            ev.options.splice(index, 1);
+        }
+    }
+}
+function splitByDay(start, end, ALLOW_LATE_END) {
+    const segments = [];
+
+    const startDay = start.startOf('day');
+    const endDay = end.startOf('day');
+
+    // Vérifier si la réservation traverse minuit
+    const crossesMidnight = !startDay.equals(endDay);
+
+    // Extraire les heures avec décimales
+    const startHour = start.hour + start.minute / 60;
+    const endHour = end.hour + end.minute / 60;
+
+    // Vérifier si on a une continuation tardive autorisée
+    const hasLateContinuation =
+        crossesMidnight &&
+        endHour <= ALLOW_LATE_END;
+
+    // Itérer sur chaque jour
+    let current = startDay;
+
+    while (current <= endDay) {
+        const isFirst = current.equals(startDay);
+        const isLast = current.equals(endDay);
+
+        segments.push({
+            start: isFirst ? startHour : 0,
+            end: isLast ? endHour : 24,
+            date: current.toLocaleString(),
+        });
+
+        current = current.plus({ days: 1 });
+    }
+
+    // Gérer la continuation tardive
+    if (hasLateContinuation) {
+        segments.pop();
+        segments[segments.length - 1].is_last = true;
+        segments[segments.length - 1].end = 24 + endHour;
+    }
+
+    return segments;
+}
+function getEventPrice(start,end) {
+    const short_after = window.RoomConfig.settings.always_short_after;
+    const short_before = window.RoomConfig.settings.always_short_before;
+    const max_hours_short = window.RoomConfig.settings.max_hours_short;
+    const late_end_hour = window.RoomConfig.settings.allow_late_end_hour;
+    const price_short = window.RoomConfig.settings.price_short;
+    const price_full_day = window.RoomConfig.settings.price_full_day;
+
+    const segments = splitByDay(start,end,late_end_hour);
+    let label = "";
+    let nb_short = 0;
+    let nb_full = 0;
+    segments.forEach((ev) => {
+        if ((short_before && ev.end <= short_before) ||
+            (short_after && ev.start >= short_after) ||
+            (max_hours_short && ev.end-ev.start <= max_hours_short)) {
+            nb_short++;
+        } else {
+            nb_full++;
+        }
+    })
+    if (segments.length > 1) {
+        label += segments[0].date + " au " + segments[segments.length-1].date + " (";
+        if (nb_short) {
+            label += nb_short + "x réservation courte, ";
+        }
+        if (nb_full) {
+            label += nb_full + "x réservation journée, ";
+        }
+        label = label.substring(0, label.length - 2) + ")"
+    } else {
+        label = segments[0].date + " (";
+        if (nb_short) {
+            label += "réservation courte";
+        } else if (nb_full) {
+            label += "réservation journée"
+        }
+        label += ")";
+    }
+    const price = nb_short*price_short + nb_full*price_full_day;
+    return ([label, price]);
+}
+
+function getOptionsPrice(options) {
+    let label = "";
+    let price = 0;
+    let index;
+    let count = 0;
+    options.forEach((optionId) => {
+        index = window.RoomConfig.options.findIndex((opt) => opt.id == optionId)
+        if (index >= 0) {
+            label += window.RoomConfig.options[index].name + ", ";
+            price += window.RoomConfig.options[index].price;
+            count++;
+        }
+    });
+    label = label.substring(0, label.length - 2);
+    if (count === 0) {
+        return ['', 0];
+    } else if (count === 1) {
+        label = "option: " + label;
+    } else {
+        label = "options: " + label;
+    }
+    return ([label, price]);
+}
+
+function updateCost(ev) {
+    if (ev.status !== Status.FREE) {
+        ev.price = 0;
+        ev.eventRow.querySelector(".event-info-text").textContent = "";
+        return;
+    }
+    const [label, price] = getEventPrice(ev.start, ev.end);
+    const [options_label, options_price] = getOptionsPrice(ev.options);
+    ev.price = price + options_price;
+    let full_label = options_label ? label + " - " + options_label : label;
+    full_label += ": " + currency(ev.price);
+    ev.eventRow.querySelector(".event-info-text").textContent = full_label;
+}
+
+function getDiscountValue(disc,initPrice) {
+    return disc.type == "fixed" ? disc.value : disc.type == "percent" ? disc.value*initPrice/100 : 0;
+}
+
+function updateTotalCost() {
+    let initPrice = 0;
+    window.ResEvents.map((ev) => initPrice += ev.price);
+    document.getElementById("total-cost").textContent = currency(initPrice);
+    let sumDiscounts = 0, current;
+    window.RoomConfig.discounts.forEach((disc) => {
+        if (window.EnabledDiscounts.includes(disc.id)) {
+            current = getDiscountValue(disc,initPrice);
+            sumDiscounts += current;
+            disc.discountSummary.textContent = currency(-current);
+            showDOM(disc.discountSummary.parentElement.parentElement);
+        } else {
+            hideDOM(disc.discountSummary.parentElement.parentElement);
+        }
+    });
+
+    const special_discount = Math.abs(parseFloat(document.getElementById("special_discount")?.value));
+    const special_discount_cost_span = document.getElementById("special_discount-cost");
+    if (special_discount) {
+        special_discount_cost_span.textContent = currency(-special_discount);
+        showDOM(special_discount_cost_span.parentElement.parentElement);
+    } else {
+        hideDOM(special_discount_cost_span.parentElement.parentElement);
+    }
+
+    const donation = Math.abs(parseFloat(document.getElementById("donation")?.value));
+    const donation_cost_span = document.getElementById("donation-cost");
+    if (donation) {
+        donation_cost_span.textContent = currency(donation);
+        showDOM(donation_cost_span.parentElement.parentElement);
+    } else {
+        hideDOM(donation_cost_span.parentElement.parentElement);
+    }
+
+    const final_cost = initPrice - sumDiscounts - (special_discount || 0) + (donation || 0);
+    document.getElementById("final-cost").textContent = currency(final_cost);
+}
+
+function initUpdateDiscounts() {
+    window.RoomConfig.discounts.forEach((disc) => {
+        disc.discountInput.addEventListener('change', () => {
+            if (disc.discountInput.checked && !window.EnabledDiscounts.includes(disc.id)) {
+                window.EnabledDiscounts.push(disc.id);
+                updateTotalCost();
+            } else if (!disc.discountInput.checked && window.EnabledDiscounts.includes(disc.id)) {
+                window.EnabledDiscounts.splice(window.EnabledDiscounts.indexOf(disc.id), 1);
+                updateTotalCost();
+            }
+        });
+        if (disc.discountInput.checked && !window.EnabledDiscounts.includes(disc.id)) {
+            window.EnabledDiscounts.push(disc.id);
+        } else if (!disc.discountInput.checked && window.EnabledDiscounts.includes(disc.id)) {
+            window.EnabledDiscounts.splice(window.EnabledDiscounts.indexOf(disc.id), 1);
+        }
+    });
+}
+
+function initUpdateRow() {
+    document.getElementById('events-container').addEventListener('input', (event) => {
+        const target = event.target;
+        if (target.matches('.event-start,.event-end')) {
+            const id = target.closest('.event-row').getAttribute("data-event-id");
+            const ev = window.ResEvents.find(e => e.id == id);
+            updateAvailability(ev);
+            updateCost(ev);
+            updateTotalCost();
+        } else if (target.matches('.event-row-options input')) {
+            const id = target.closest('.event-row').getAttribute("data-event-id");
+            const ev = window.ResEvents.find(e => e.id == id);
+            const optionId = parseInt(target.getAttribute("value"));
+            updateOption(ev,optionId,target.checked);
+            updateCost(ev);
+            updateTotalCost();
+        }
+    });
+}
+
+function fillContactInfo() {
+    const id = parseInt(document.getElementById("contact-select").value);
+    const contact = window.Contacts.find(contact => contact.id == id) ?? null;
+    if (contact) {
+        document.getElementById("type_" + contact.type).checked = true;
+        dataShowWhen(true, contact.type);
+    }
+    const entity_name = contact?.entity_name ? contact.entity_name : "";
+    document.getElementById("entity_name").value = entity_name;
+    const first_name = contact?.first_name ? contact.first_name : "";
+    document.getElementById("first_name").value = first_name;
+    const last_name = contact?.last_name ? contact.last_name : "";
+    document.getElementById("last_name").value = last_name;
+    const email = contact?.email ? contact.email : "";
+    document.getElementById("email").value = email;
+    const invoice_email = contact?.invoice_email ? contact.invoice_email : "";
+    document.getElementById("invoice_email").value = invoice_email;
+    const invoice_email_field = document.querySelector('[data-toggle="invoice-email"]');
+    const has_invoice_email = document.getElementById("has_invoice_email");
+    invoice_email ? (has_invoice_email.checked = true) : (has_invoice_email.checked = false);
+    invoice_email ? showDOM(invoice_email_field) : hideDOM(invoice_email_field);
+    const phone = contact?.phone ? contact.phone : "";
+    document.getElementById("phone").value = phone;
+    const street = contact?.street ? contact.street : "";
+    document.getElementById("street").value = street;
+    const zip = contact?.zip ? contact.zip : "";
+    document.getElementById("zip").value = zip;
+    const city = contact?.city ? contact.city : "";
+    document.getElementById("city").value = city;
+}
+
+function initFillContactInfo() {
+    const contactSelect = document.getElementById("contact-select");
+    if (contactSelect) {
+        contactSelect.addEventListener('change', () => {
+            fillContactInfo();
+            updateTotalCost();
+        });
+        fillContactInfo();
+    }
+}
+
+function initUpdateSpecial() {
+    const donationInput = document.getElementById("donation");
+    if (donationInput) {
+        donationInput.addEventListener('input', () => {
+            updateTotalCost();
+        });
+    }
+    const specialDiscountInput = document.getElementById("special_discount");
+    if (specialDiscountInput) {
+        specialDiscountInput.addEventListener('input', () => {
+            updateTotalCost();
+        });
+    }
+}
+function hideDOM(elem) {
+    if (elem && !elem.classList.contains("hidden")) {
+        elem.classList.add("hidden");
+    }
+}
+
+function showDOM(elem) {
+    if (elem?.classList.contains("hidden")) {
+        elem.classList.remove("hidden");
+    }
+}
+function showDiscountsFor(type) {
+    let nb_shown = 0;
+    window.RoomConfig.discounts.forEach((discount) => {
+        if (discount.restrict_to && discount.restrict_to != type) {
+            hideDOM(discount.discountInput.parentElement);
+            if (window.EnabledDiscounts.includes(discount.id)) {
+                window.EnabledDiscounts.splice(window.EnabledDiscounts.indexOf(discount.id), 1);
+                discount.discountInput.checked = false;
+            }
+        } else if (discount.restrict_to && discount.restrict_to == type) {
+            showDOM(discount.discountInput.parentElement);
+            nb_shown++;
+        } else {
+            nb_shown++;
+        }
+    });
+    const discounts_group = document.getElementById("discounts-form-group");
+    nb_shown > 0 ? showDOM(discounts_group) : hideDOM(discounts_group);
+}
+
+function dataShowWhen(show, type) {
+    if (show) {
+        // Masquer tous les éléments avec data-show-when
+        document.querySelectorAll('[data-show-when]').forEach((elem) => {
+            hideDOM(elem);
+        });
+
+        // Afficher les éléments correspondant au type sélectionné
+        document.querySelectorAll(`[data-show-when="${type}"]`).forEach((elem) => {
+            showDOM(elem);
+        });
+        showDiscountsFor(type);
+        document.getElementById("entity_name").required = (type == "organization");
+    }
+}
+
+function initDataShowWhen() {
+    const types = ["individual", "organization"];
+    types.forEach((type) => {
+        const radioBtn = document.getElementById("type_" + type);
+        if (radioBtn) {
+            radioBtn.addEventListener('change', (event) => {
+                dataShowWhen(radioBtn.checked, type);
+                updateTotalCost();
+            });
+            dataShowWhen(radioBtn.checked, type);
+        }
+    });
+    const invoiceEmailCheckbox = document.getElementById("has_invoice_email");
+    if (invoiceEmailCheckbox) {
+        const input = document.querySelector('[data-toggle="invoice-email"]');
+        invoiceEmailCheckbox.addEventListener('change', () => {
+            invoiceEmailCheckbox.checked ? showDOM(input) : hideDOM(input);
+        });
+        invoiceEmailCheckbox.checked ? showDOM(input) : hideDOM(input);
+    }
+}
+
+function validateEventsBeforeSubmit(event) {
+    if (window.ResEvents.length === 0) {
+        event.preventDefault();
+        alert('Erreur : Vous devez ajouter au moins une date de réservation.');
+        return false;
+    }
+
+    const invalidEvents = window.ResEvents.filter(ev => ev.status !== Status.FREE);
+    if (invalidEvents.length > 0) {
+        event.preventDefault();
+
+        let errorMessage = 'Erreur : Certaines dates de réservation ne sont pas valides :\n\n';
+        invalidEvents.forEach(ev => {
+            const statusLabel = Status.label(ev.status);
+            errorMessage += `- ${statusLabel}\n`;
+        });
+        errorMessage += '\nVeuillez corriger ces dates avant de soumettre le formulaire.';
+
+        alert(errorMessage);
+        return false;
+    }
+    return true;
+}
+
+function showLoaderModal() {
+    const modal = document.getElementById('loader-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function hideLoaderModal() {
+    const modal = document.getElementById('loader-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function initFormValidation() {
+    const form = document.querySelector('form.reservation-form');
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            // First validate events
+            if (!validateEventsBeforeSubmit(event)) {
+                return false;
+            }
+            // If validation passed, show loader
+            showLoaderModal();
+            return true;
+        });
+    }
+}
+
+// Export for use in cancel modal
+window.showLoaderModal = showLoaderModal;
+window.hideLoaderModal = hideLoaderModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.ResEvents.forEach((ev) => {
+        ev.start = ev.start ? roomTzDate(ev.start) : '';
+        ev.end = ev.end ? roomTzDate(ev.end) : '';
+    })
+    linkDOMToArrays(); // Provide links to DOM elements in events and discounts arrays
+    initDataShowWhen(); // Setup conditional form fields (only for individuals / organization / etc.)
+    initAddRemoveEvent();
+    initUpdateRow(); // Add event listeners to row form elements
+    initUpdateDiscounts(); // Add event listeners to row form elements AND do an initial update
+    initUpdateSpecial(); // Add event listeners for donation and special discount
+    initFillContactInfo();
+    initFormValidation(); // Validate events before form submission
+    initAvailabilityCheck().then(function() { // Download calendar slots
+        window.ResEvents.forEach((ev) => { // for each event, update corresponding arrays, then update cost
+            updateAvailability(ev);
+            window.RoomConfig.options.forEach((opt) => {
+                updateOption(ev,opt.id,ev.eventRow.querySelector("#option_" + ev.id + "_" + opt.id).checked);
+            });
+            updateCost(ev);
+        });
+        updateTotalCost();
+    });
+});

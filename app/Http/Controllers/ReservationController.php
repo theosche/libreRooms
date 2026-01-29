@@ -1,0 +1,322 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\OwnerUserRoles;
+use App\Enums\ReservationStatus;
+use App\Http\Requests\StoreReservationRequest;
+use App\Http\Requests\UpdateReservationRequest;
+use App\Models\Contact;
+use App\Models\Reservation;
+use App\Models\Room;
+use App\Services\Reservation\ReservationService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class ReservationController extends Controller
+{
+    private function reservationForm(Room $room, ?Reservation $reservation): View
+    {
+        $room->load('owner', 'discounts', 'options', 'customFields');
+        $timezone = $room->getTimezone();
+
+        // Prepare room configuration for JavaScript
+        $roomConfig = [
+            'settings' => [
+                'availability_route' => route('rooms.availability', $room),
+                'price_mode' => $room->price_mode->value,
+                'price_short' => $room->price_short,
+                'price_full_day' => $room->price_full_day,
+                'max_hours_short' => $room->max_hours_short,
+                'always_short_after' => $room->always_short_after,
+                'always_short_before' => $room->always_short_before,
+                'allow_late_end_hour' => $room->allow_late_end_hour,
+                'reservation_cutoff_days' => $room->reservation_cutoff_days,
+                'reservation_advance_limit' => $room->reservation_advance_limit,
+                'timezone' => $timezone,
+                'currency' => $room->owner->getCurrency(),
+                'locale' => str_replace('_','-', $room->owner->getLocale())
+            ],
+            'options' => $room->options->where('active', true)->map(fn ($o) => [
+                'id' => $o->id,
+                'name' => $o->name,
+                'description' => $o->description,
+                'price' => $o->price,
+            ])->values(),
+            'discounts' => $room->discounts->where('active', true)->map(fn ($d) => [
+                'id' => $d->id,
+                'name' => $d->name,
+                'description' => $d->description,
+                'type' => $d->type->value,
+                'restrict_to' => $d->limit_to_contact_type?->value,
+                'value' => $d->value,
+            ])->values(),
+        ];
+        // Get enabled discounts
+        $enabledDiscounts = old('discounts') ?? $reservation?->discounts->modelKeys() ?? [];
+
+        // Prepare events data
+        if (! is_null(old('events'))) {
+            // From old input (validation error)
+            $events = [];
+            foreach (old('events') as $index => $event) {
+                $events[$index] = [
+                    'start' => $event['start'],
+                    'end' => $event['end'],
+                    'uid' => $event['uid'] ?? '',
+                    'options' => $event['options'] ?? [],
+                    'id' => $index,
+                ];
+            }
+        } elseif (! is_null($reservation?->events)) {
+            // From existing reservation
+            $sortedEvents = $reservation->events->sortBy('start')->values();
+
+            $events = [];
+            foreach ($sortedEvents as $index => $reservationEvent) {
+                $events[$index] = [
+                    'start' => $reservationEvent->start->setTimezone($timezone)->format('Y-m-d\TH:i'),
+                    'end' => $reservationEvent->end->setTimezone($timezone)->format('Y-m-d\TH:i'),
+                    'uid' => $reservationEvent->uid,
+                    'options' => $reservationEvent->options->pluck('id')->toArray(),
+                    'id' => $index,
+                ];
+            }
+        } else {
+            // Default: single empty event
+            $events = [
+                0 => [
+                    'start' => null,
+                    'end' => null,
+                    'uid' => null,
+                    'options' => [],
+                    'id' => 0,
+                ],
+            ];
+        }
+
+        $contacts = auth()->check()
+        ? auth()->user()->contacts
+        : collect();
+
+        // Ajouter $tenant à $contacts s'il existe et n'est pas déjà dans la collection
+        if (isset($reservation) && ! $contacts->contains('id', $reservation->tenant->id)) {
+            $contacts = $contacts->push($reservation->tenant);
+        }
+
+        return view('reservations.create', [
+            'room' => $room,
+            'contacts' => $contacts,
+            'reservation' => $reservation,
+            'roomConfig' => $roomConfig,
+            'enabledDiscounts' => $enabledDiscounts,
+            'events' => $events,
+        ]);
+    }
+
+    public function create(Room $room): View
+    {
+        $this->authorize('reserve', $room);
+
+        return $this->reservationForm($room, null);
+    }
+
+    public function edit(Reservation $reservation): View|RedirectResponse
+    {
+        if (!$reservation->isEditable()) {
+            return redirect()->route('reservations.index')->with('error', 'Réservation non modifiable');
+        }
+        return $this->reservationForm($reservation->room, $reservation);
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $user = auth()->user();
+        $view = $request->input('view', 'mine'); // 'mine' or 'admin'
+
+        // Check if user can access admin view (moderator or admin role)
+        $canViewAdmin = $user->is_global_admin ||
+            $user->owners()
+                ->wherePivotIn('role', [OwnerUserRoles::ADMIN->value, OwnerUserRoles::MODERATOR->value])
+                ->exists();
+
+        if ($view === 'admin' && ! $canViewAdmin) {
+            $view = 'mine';
+        }
+
+        if ($view === 'admin') {
+            // Get all room IDs where user has moderator or admin rights
+            if ($user->is_global_admin) {
+                $roomIds = Room::pluck('id');
+            } else {
+                $ownerIds = $user->owners()
+                    ->wherePivotIn('role', [OwnerUserRoles::ADMIN->value, OwnerUserRoles::MODERATOR->value])
+                    ->pluck('owners.id');
+                $roomIds = Room::whereIn('owner_id', $ownerIds)->pluck('id');
+            }
+
+            // Build query with filters
+            $query = Reservation::with([
+                'room.owner',
+                'tenant',
+                'events',
+                'invoice',
+                'customFieldValues',
+            ])
+            ->whereIn('room_id', $roomIds)
+            ->orderBy('created_at', 'desc');
+
+            // Get available rooms and contacts for filters
+            $rooms = Room::whereIn('id', $roomIds)->get();
+
+            $contacts = Contact::whereIn('id', function ($query) use ($roomIds) {
+                $query->select('tenant_id')
+                    ->from('reservations')
+                    ->whereIn('room_id', $roomIds)
+                    ->distinct();
+            })->get();
+        } else {
+            // Get all contact IDs for the logged-in user
+            $contactIds = $user->contacts()->pluck('contacts.id');
+
+            // Build query with filters
+            $query = Reservation::with([
+                'room.owner',
+                'tenant',
+                'events',
+                'invoice',
+                'customFieldValues',
+            ])
+            ->whereIn('tenant_id', $contactIds)
+            ->orderBy('created_at', 'desc');
+
+            // Get available rooms and contacts for filters
+            $rooms = Room::whereHas('reservations', function ($q) use ($contactIds) {
+                $q->whereIn('tenant_id', $contactIds);
+            })->get();
+
+            $contacts = $user->contacts;
+        }
+
+        // Apply filters
+        if ($request->filled('room_id')) {
+            $query->where('room_id', $request->input('room_id'));
+        }
+
+        if ($request->filled('tenant_id')) {
+            $query->where('tenant_id', $request->input('tenant_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        $reservations = $query->paginate(15)->appends($request->except('page'));
+
+        return view('reservations.index', [
+            'reservations' => $reservations,
+            'rooms' => $rooms,
+            'contacts' => $contacts,
+            'user' => $user,
+            'view' => $view,
+            'canViewAdmin' => $canViewAdmin,
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreReservationRequest $request, Room $room, ReservationService $service): RedirectResponse
+    {
+        $request->validated();
+        $reservation = $service->createFromRequest(
+            $request,
+            $room,
+            auth()->user()
+        );
+
+        $msg = $reservation->status === ReservationStatus::PENDING ?
+            "Nouvelle réservation créée avec succès" :
+            "Nouvelle réservation confirmée avec succès";
+
+
+        if (auth()->check()) {
+            return redirect()->route('reservations.index')->with('success', $msg);
+        } else {
+            return redirect()->route('rooms.index')->with('success', $msg);
+        }
+    }
+
+    public function update(UpdateReservationRequest $request, Reservation $reservation, ReservationService $service): RedirectResponse
+    {
+        if (!$reservation->isEditable()) {
+            return redirect()->route('reservations.index')->with('error', 'Réservation non modifiable');
+        }
+
+        $request->validated();
+        $reservation = $service->updateFromRequest(
+            $request,
+            $reservation,
+            auth()->user()
+        );
+
+        $msg = $reservation->status === ReservationStatus::PENDING ?
+            "Réservation mise à jour avec succès" :
+            "Réservation confirmée avec succès";
+
+        if (auth()->check()) {
+            return redirect()->route('reservations.index')->with('success', $msg);
+        } else {
+            return redirect()->route('rooms.index')->with('success', $msg);
+        }
+    }
+
+    /**
+     * Cancel a reservation (from index page modal)
+     */
+    public function cancel(Request $request, Reservation $reservation, ReservationService $service): RedirectResponse
+    {
+        $user = auth()->user();
+
+        // Check permissions
+        if ($reservation->status === ReservationStatus::PENDING) {
+            // Anyone can cancel a pending reservation
+            $canCancel = true;
+        } elseif ($reservation->status === ReservationStatus::CONFIRMED) {
+            // Moderators and admins can cancel confirmed reservations
+            $canCancel = $user->canManageReservationsFor($reservation->room);
+        } else {
+            $canCancel = false;
+        }
+
+        if (! $canCancel) {
+            return redirect()->back()->with('error', 'Vous n\'avez pas la permission d\'annuler cette réservation.');
+        }
+
+        // Get modal parameters
+        $sendEmail = $request->exists('send_email');
+        $reason = $request->input('cancellation_reason');
+
+        // Use service to handle cancellation
+        $service->cancel($reservation, $sendEmail, $reason);
+
+        if ($reservation->isPaid()) {
+            return redirect()->route('reservations.index')->with('success', 'Réservation annulée. Attention - facture déjà payée.');
+        }
+        return redirect()->route('reservations.index')->with('success', 'Réservation annulée avec succès.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Reservation $reservation)
+    {
+        $reservation->delete();
+
+        return response()->json(null, 204);
+    }
+}

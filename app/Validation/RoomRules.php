@@ -1,0 +1,114 @@
+<?php
+
+namespace App\Validation;
+
+use App\Enums\EmbedCalendarModes;
+use App\Enums\ExternalSlotProviders;
+use App\Enums\CalendarViewModes;
+use Illuminate\Validation\Rule;
+use Illuminate\Http\Request;
+use App\Enums\PriceModes;
+use App\Enums\CharterModes;
+use App\Models\Owner;
+
+class RoomRules
+{
+    public static function prepare(Request $request)
+    {
+        $owner = Owner::find($request->input('owner_id'));
+        if ($owner && !$owner->caldavSettings()->valid()) {
+            $request->merge(['external_slot_provider' => null]);
+        }
+    }
+    public static function rules(Request $request): array
+    {
+        $user = auth()->user();
+        $userId = $user->id;
+
+        // Get owner IDs that the user can use
+        if ($user->is_global_admin) {
+            $ownerRule = Rule::exists('owners', 'id');
+        } else {
+            $ownerRule = Rule::exists('owner_user', 'owner_id')
+                ->where('user_id', $userId)
+                ->where('role', 'admin');
+        }
+
+        return [
+            'owner_id' => [
+                'required',
+                'integer',
+                $ownerRule,
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'description' => ['nullable', 'string'],
+            'active' => ['boolean'],
+            'is_public' => ['boolean'],
+
+            // Price configuration
+            'price_mode' => [
+                'required',
+                Rule::in(array_map(fn ($case) => $case->value, PriceModes::cases())),
+            ],
+            'price_short' => ['nullable', 'numeric', 'min:0'],
+            'price_full_day' => ['required', 'numeric', 'min:0'],
+            // max_hours_short is required if price_short is set
+            'max_hours_short' => [
+                $request->filled('price_short') ? 'required' : 'nullable',
+                'integer',
+                'min:1',
+            ],
+            'always_short_after' => ['nullable', 'integer', 'min:0', 'max:24'],
+            'always_short_before' => ['nullable', 'integer', 'min:0', 'max:24'],
+            'allow_late_end_hour' => ['nullable', 'integer', 'min:0'],
+
+            // Reservation rules
+            'reservation_cutoff_days' => ['nullable', 'integer', 'min:0'],
+            'reservation_advance_limit' => ['nullable', 'integer', 'min:0'],
+
+            // Discounts and donations
+            'use_special_discount' => ['boolean'],
+            'use_donation' => ['boolean'],
+
+            // Charter configuration
+            'charter_mode' => [
+                'required',
+                Rule::in(array_map(fn ($case) => $case->value, CharterModes::cases())),
+            ],
+            // charter_str is required unless charter_mode is NONE
+            'charter_str' => [
+                $request->input('charter_mode') !== CharterModes::NONE->value ? 'required' : 'nullable',
+                'string',
+            ],
+            'custom_message' => ['nullable', 'string'],
+
+            'secret_message' => ['nullable', 'string'],
+
+            // Calendar configuration
+            'external_slot_provider' => [
+                'nullable',
+                Rule::in(array_map(fn ($case) => $case->value, ExternalSlotProviders::cases())),
+            ],
+            'dav_calendar' => [
+                $request->input('external_slot_provider') === ExternalSlotProviders::CALDAV->value ? 'required' : 'nullable',
+                'string',
+                'max:255',
+            ],
+            'embed_calendar_mode' => [
+                Rule::in(array_map(fn ($case) => $case->value, EmbedCalendarModes::cases())),
+            ],
+            'calendar_view_mode' => [
+                Rule::in(array_map(fn ($case) => $case->value, CalendarViewModes::cases())),
+            ],
+
+            // Regional settings
+            'timezone' => ['nullable', 'string', 'max:100'],
+
+            'disable_mailer' => ['nullable', 'boolean'],
+        ];
+    }
+}
