@@ -21,26 +21,4 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EnsureSetupComplete::class,
             \App\Http\Middleware\EnsureSystemSettingsConfigured::class,
         ]);
-    })->withExceptions(function (Exceptions $exceptions): void {
-        // Handle missing APP_KEY during initial setup
-        // This is safe because: 1) very specific exception, 2) not exploitable, 3) clear fix
-        $exceptions->render(function (\Illuminate\Encryption\MissingAppKeyException $e, \Illuminate\Http\Request $request) {
-            $envPath = base_path('.env');
-            $examplePath = base_path('.env.example');
-
-            // Ensure .env exists
-            if (! file_exists($envPath) && file_exists($examplePath)) {
-                copy($examplePath, $envPath);
-            }
-
-            // Generate the key
-            if (file_exists($envPath)) {
-                \Artisan::call('key:generate', ['--force' => true]);
-
-                // Redirect to same URL to retry with the new key
-                return new \Illuminate\Http\RedirectResponse($request->fullUrl());
-            }
-
-            return null; // Let it fail normally if we can't fix it
-        });
     })->create();
