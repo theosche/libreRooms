@@ -45,9 +45,6 @@ class SetupController extends Controller
     {
         $this->authorizeEnvironmentAccess();
 
-        // Ensure .env exists (copy from .env.example if needed)
-        $this->ensureEnvFileExists();
-
         // Read current values directly from .env file (not cached config)
         $envValues = $this->parseEnvFile();
 
@@ -244,23 +241,6 @@ class SetupController extends Controller
     }
 
     /**
-     * Ensure .env file exists, copy from .env.example if not.
-     */
-    protected function ensureEnvFileExists(): void
-    {
-        $envPath = base_path('.env');
-        $examplePath = base_path('.env.example');
-
-        if (! file_exists($envPath) && file_exists($examplePath)) {
-            copy($examplePath, $envPath);
-        }
-        // Generate APP_KEY if not set
-        if (empty(env('APP_KEY'))) {
-            \Artisan::call('key:generate', ['--force' => true]);
-        }
-    }
-
-    /**
      * Parse .env file and return key-value array.
      *
      * @return array<string, string>
@@ -353,7 +333,6 @@ class SetupController extends Controller
     {
         try {
             DB::connection()->getPdo();
-
             return true;
         } catch (\Exception $e) {
             return false;
@@ -388,8 +367,6 @@ class SetupController extends Controller
 
         file_put_contents($envPath, $content);
         Artisan::call('config:clear');   // recharge .env
-        Artisan::call('cache:clear');   // recharge .env
-        Artisan::call('config:cache');   // recache pour prod
     }
 
     /**
