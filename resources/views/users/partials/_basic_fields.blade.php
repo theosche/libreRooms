@@ -7,7 +7,7 @@
 
     <fieldset class="form-element">
         <div class="form-field">
-            <label for="name" class="form-element-title">Nom d'utilisateur</label>
+            <label for="name" class="form-element-title">Nom du compte</label>
             <input
                 type="text"
                 id="name"

@@ -36,7 +36,7 @@
             <h3 class="form-group-title">Compte administrateur</h3>
 
             <div class="form-element">
-                <label for="name" class="form-element-title">Nom</label>
+                <label for="name" class="form-element-title">Nom du compte</label>
                 <div class="form-field">
                     <input
                         type="text"
