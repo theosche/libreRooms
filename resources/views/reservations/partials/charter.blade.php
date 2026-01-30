@@ -23,6 +23,9 @@
                             J'ai pris connaissance de <a href="{{ $charter_str }}">la charte</a> et j'y adhère.
                         @endif
                     </label>
+                    @error('charter')
+                        <span class="text-red-600 text-sm">{{ $message }}</span>
+                    @enderror
                 </div>
         </div>
     </div>

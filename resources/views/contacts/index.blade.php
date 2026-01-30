@@ -100,7 +100,7 @@
                             @if($contact->street || $contact->zip || $contact->city)
                                 <div>
                                     @if($contact->street)
-                                        <div>{{ $contact->street }}</div>
+                                        <div>{!! nl2br($contact->street) !!}</div>
                                     @endif
                                     @if($contact->zip || $contact->city)
                                         <div>{{ $contact->zip }} {{ $contact->city }}</div>

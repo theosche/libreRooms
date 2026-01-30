@@ -68,6 +68,9 @@
                 </div>
             @endforeach
             </div>
+            @error('contact_type')
+                <span class="text-red-600 text-sm">{{ $message }}</span>
+            @enderror
         </fieldset>
 
         <fieldset class="form-element {{ $isOrganization ? '' : 'hidden' }}" data-show-when="{{App\Enums\ContactTypes::ORGANIZATION->value}}">
@@ -80,6 +83,9 @@
                     value="{{ $contactInfo['entity_name'] }}"
                     @required($isOrganization)
                 >
+                @error('entity_name')
+                    <span class="text-red-600 text-sm">{{ $message }}</span>
+                @enderror
             </div>
         </fieldset>
 
@@ -96,6 +102,9 @@
                         value="{{ $contactInfo['first_name'] }}"
                         required
                     >
+                    @error('first_name')
+                        <span class="text-red-600 text-sm">{{ $message }}</span>
+                    @enderror
                 </div>
                 <div class="form-field">
                     <label for="last_name" class="form-element-title">Nom
@@ -108,6 +117,9 @@
                         value="{{ $contactInfo['last_name'] }}"
                         required
                     >
+                    @error('last_name')
+                        <span class="text-red-600 text-sm">{{ $message }}</span>
+                    @enderror
                 </div>
             </div>
         </fieldset>
@@ -122,6 +134,9 @@
                     value="{{ $contactInfo['email'] }}"
                     required
                 >
+                @error('email')
+                    <span class="text-red-600 text-sm">{{ $message }}</span>
+                @enderror
             </div>
         </fieldset>
 
@@ -145,6 +160,9 @@
                     name="invoice_email"
                     value="{{ $contactInfo['invoice_email'] }}"
                 >
+                @error('invoice_email')
+                    <span class="text-red-600 text-sm">{{ $message }}</span>
+                @enderror
             </div>
         </fieldset>
 
@@ -158,6 +176,9 @@
                     value="{{ $contactInfo['phone'] }}"
                     required
                 >
+                @error('phone')
+                    <span class="text-red-600 text-sm">{{ $message }}</span>
+                @enderror
             </div>
         </fieldset>
 
@@ -174,6 +195,9 @@
                     value="{{ $contactInfo['street'] }}"
                     required
                 >
+                @error('street')
+                    <span class="text-red-600 text-sm">{{ $message }}</span>
+                @enderror
             </div>
         </fieldset>
 
@@ -188,6 +212,9 @@
                         value="{{ $contactInfo['zip'] }}"
                         required
                     >
+                    @error('zip')
+                        <span class="text-red-600 text-sm">{{ $message }}</span>
+                    @enderror
                 </div>
                 <div class="form-field">
                     <label for="city" class="form-element-title">Ville *</label>
@@ -198,6 +225,9 @@
                         value="{{ $contactInfo['city'] }}"
                         required
                     >
+                    @error('city')
+                        <span class="text-red-600 text-sm">{{ $message }}</span>
+                    @enderror
                 </div>
             </div>
         </fieldset>

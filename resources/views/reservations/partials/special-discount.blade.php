@@ -11,6 +11,9 @@
                 name="special_discount"
                 value="{{ old('special_discount') ?? $specialDiscount }}"
             >
+            @error('special_discount')
+                <span class="text-red-600 text-sm">{{ $message }}</span>
+            @enderror
         </div>
     </fieldset>
  </div>

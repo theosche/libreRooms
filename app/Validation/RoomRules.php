@@ -63,6 +63,8 @@ class RoomRules
             'images.*' => ['image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
             'remove_images' => ['nullable', 'array'],
             'remove_images.*' => ['integer', 'exists:images,id'],
+            'image_order' => ['nullable', 'array'],
+            'image_order.*' => ['string', 'regex:/^(existing|new):\d+$/'],
             'active' => ['boolean'],
             'is_public' => ['boolean'],
 

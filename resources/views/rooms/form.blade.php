@@ -222,38 +222,45 @@
             <!-- Images -->
             <div class="form-group">
                 <h3 class="form-group-title">Images</h3>
+                <small class="text-gray-600 block mb-4">Glissez-déposez les images pour modifier l'ordre d'affichage. La première image sera utilisée comme image principale.</small>
 
-                @if(isset($room) && $room->images->count() > 0)
-                    <fieldset class="form-element">
-                        <label class="form-element-title">Images existantes</label>
-                        <div class="grid grid-cols-3 gap-4 mt-2">
-                            @foreach($room->images as $image)
-                                <div class="relative group" id="image-container-{{ $image->id }}">
-                                    <img src="{{ $image->url }}" alt="{{ $image->original_name }}" class="w-full h-32 object-cover rounded-lg">
+                <fieldset class="form-element">
+                    <label class="form-element-title">Images</label>
+                    <div id="images-sortable" class="grid grid-cols-3 gap-4 mt-2 min-h-[8rem]">
+                        @if(isset($room) && $room->images->count() > 0)
+                            @foreach($room->images as $index => $image)
+                                <div class="image-item relative group cursor-move border-2 border-transparent hover:border-blue-400 rounded-lg transition-colors"
+                                     data-type="existing"
+                                     data-image-id="{{ $image->id }}"
+                                     id="image-container-{{ $image->id }}"
+                                     draggable="true">
+                                    <img src="{{ $image->url }}" alt="{{ $image->original_name }}" class="w-full h-32 object-cover rounded-lg pointer-events-none">
+                                    <div class="absolute top-2 left-2 bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold image-order-badge">
+                                        {{ $index + 1 }}
+                                    </div>
                                     <button
                                         type="button"
-                                        onclick="markImageForRemoval({{ $image->id }})"
-                                        class="absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity ignore-styled-form"
+                                        class="image-remove-btn absolute top-2 right-2 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer ignore-styled-form"
                                         title="Supprimer cette image"
                                     >
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
                                     </button>
+                                    <input type="hidden" name="image_order[]" value="existing:{{ $image->id }}">
                                 </div>
                             @endforeach
-                        </div>
-                        <div id="remove-images-container"></div>
-                    </fieldset>
-                @endif
+                        @endif
+                    </div>
+                    <div id="remove-images-container"></div>
+                </fieldset>
 
                 <fieldset class="form-element">
                     <div class="form-field">
-                        <label for="images" class="form-element-title">Ajouter des images</label>
+                        <label for="images-input" class="form-element-title">Ajouter des images</label>
                         <input
                             type="file"
-                            id="images"
-                            name="images[]"
+                            id="images-input"
                             multiple
                             accept="image/jpeg,image/jpg,image/png,image/webp"
                             class="block w-full text-sm text-gray-500
@@ -271,6 +278,8 @@
                             <span class="text-red-600 text-sm">{{ $message }}</span>
                         @enderror
                     </div>
+                    {{-- Hidden file input that will be populated with reordered files --}}
+                    <input type="file" id="images-ordered" name="images[]" multiple class="hidden">
                 </fieldset>
             </div>
 
@@ -694,52 +703,6 @@
         if (confirm('Êtes-vous sûr de vouloir supprimer cette salle ?')) {
             document.getElementById('delete-room-form').submit();
         }
-    }
-
-    function markImageForRemoval(imageId) {
-        const container = document.getElementById('image-container-' + imageId);
-        const removeContainer = document.getElementById('remove-images-container');
-
-        if (container) {
-            // Add visual indication
-            container.classList.add('opacity-50');
-
-            // Add hidden input to mark for removal
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'remove_images[]';
-            input.value = imageId;
-            input.id = 'remove-image-input-' + imageId;
-            removeContainer.appendChild(input);
-
-            // Replace remove button with restore button
-            const button = container.querySelector('button');
-            button.onclick = function() { restoreImage(imageId); };
-            button.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
-            button.classList.remove('bg-red-600');
-            button.classList.add('bg-green-600');
-            button.title = 'Restaurer cette image';
-        }
-    }
-
-    function restoreImage(imageId) {
-        const container = document.getElementById('image-container-' + imageId);
-        const input = document.getElementById('remove-image-input-' + imageId);
-
-        if (container) {
-            container.classList.remove('opacity-50');
-        }
-        if (input) {
-            input.remove();
-        }
-
-        // Restore remove button
-        const button = container.querySelector('button');
-        button.onclick = function() { markImageForRemoval(imageId); };
-        button.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
-        button.classList.remove('bg-green-600');
-        button.classList.add('bg-red-600');
-        button.title = 'Supprimer cette image';
     }
 </script>
 @endsection

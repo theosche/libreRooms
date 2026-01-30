@@ -8,6 +8,9 @@
                  id="custom_message"
                  name="custom_message"
              >{{ old('custom_message') ?? $customMessage }}</textarea>
+             @error('custom_message')
+                <span class="text-red-600 text-sm">{{ $message }}</span>
+             @enderror
          </div>
      </fieldset>
  </div>

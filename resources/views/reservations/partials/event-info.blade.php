@@ -10,6 +10,9 @@
                 required
                 value="{{ old('res_title') ?? $title }}"
             >
+            @error('res_title')
+                <span class="text-red-600 text-sm">{{ $message }}</span>
+            @enderror
         </div>
     </fieldset>
      <fieldset class="form-element">
@@ -20,6 +23,9 @@
                  id="res_description"
                  name="res_description"
              >{{ old('res_description') ?? $description }}</textarea>
+             @error('res_description')
+                 <span class="text-red-600 text-sm">{{ $message }}</span>
+             @enderror
          </div>
      </fieldset>
  </div>

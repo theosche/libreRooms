@@ -1,5 +1,8 @@
 <div class="form-group" id="events-form-group">
     <h3 class="form-group-title">Dates et heures de réservation *</h3>
+    @error('events')
+        <span class="text-red-600 text-sm block mb-2">{{ $message }}</span>
+    @enderror
     <div id="events-container">
         @foreach ($events as $event)
             @include('reservations.partials.event-row', [

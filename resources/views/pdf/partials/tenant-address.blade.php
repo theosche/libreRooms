@@ -3,7 +3,7 @@
         <div>{{ html_entity_decode($tenant->entity_name) }}</div>
     @endif
     <div>{{ $tenant->first_name }} {{ $tenant->last_name }}</div>
-    <div>{{ $tenant->street }}</div>
+    <div>{!! nl2br($tenant->street) !!}</div>
     <div>{{ $tenant->zip }} {{ $tenant->city }}</div>
     <div><a href="mailto:{{ $tenant->email }}">{{ $tenant->email }}</a></div>
     @if($tenant->phone)

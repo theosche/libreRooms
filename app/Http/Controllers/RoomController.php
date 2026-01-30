@@ -167,8 +167,8 @@ class RoomController extends Controller
         // Create room
         $room = Room::create($validated);
 
-        // Handle image uploads
-        $this->handleImageUploads($request, $room);
+        // Handle image uploads and ordering
+        $this->handleImageUploadsAndOrder($request, $room);
 
         return redirect()->route('rooms.show', $room)
             ->with('success', 'La salle a été créée avec succès.');
@@ -257,8 +257,8 @@ class RoomController extends Controller
         // Handle image removals first
         $this->handleImageRemovals($request, $room);
 
-        // Handle new image uploads
-        $this->handleImageUploads($request, $room);
+        // Handle new image uploads and reordering
+        $this->handleImageUploadsAndOrder($request, $room);
 
         // Update room
         $room->update($validated);
@@ -304,29 +304,69 @@ class RoomController extends Controller
     }
 
     /**
-     * Handle image uploads for a room.
+     * Handle image uploads and ordering for a room.
+     *
+     * The image_order array contains entries like:
+     * - "existing:5" for existing images with id 5
+     * - "new:0" for new images (index in the uploaded files array)
      */
-    private function handleImageUploads(Request $request, Room $room): void
+    private function handleImageUploadsAndOrder(Request $request, Room $room): void
     {
-        if (! $request->hasFile('images')) {
-            return;
-        }
-
-        $existingCount = $room->images()->count();
+        $imageOrder = $request->input('image_order', []);
+        $uploadedFiles = $request->file('images', []);
         $maxImages = 3;
 
-        foreach ($request->file('images') as $index => $file) {
-            if ($existingCount + $index >= $maxImages) {
+        // Track which new file index we're on
+        $newFileIndex = 0;
+        $order = 0;
+
+        foreach ($imageOrder as $orderEntry) {
+            if ($order >= $maxImages) {
                 break;
             }
 
-            $path = $file->store('rooms/'.$room->id, 'public');
+            [$type, $id] = explode(':', $orderEntry);
 
-            $room->images()->create([
-                'path' => $path,
-                'original_name' => $file->getClientOriginalName(),
-                'order' => $existingCount + $index,
-            ]);
+            if ($type === 'existing') {
+                // Update order for existing image
+                $image = $room->images()->find($id);
+                if ($image) {
+                    $image->update(['order' => $order]);
+                    $order++;
+                }
+            } elseif ($type === 'new' && isset($uploadedFiles[$newFileIndex])) {
+                // Upload new image with correct order
+                $file = $uploadedFiles[$newFileIndex];
+                $path = $file->store('rooms/'.$room->id, 'public');
+
+                $room->images()->create([
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'order' => $order,
+                ]);
+
+                $newFileIndex++;
+                $order++;
+            }
+        }
+
+        // If no image_order provided but files were uploaded (fallback for simple uploads)
+        if (empty($imageOrder) && ! empty($uploadedFiles)) {
+            $existingCount = $room->images()->count();
+
+            foreach ($uploadedFiles as $index => $file) {
+                if ($existingCount + $index >= $maxImages) {
+                    break;
+                }
+
+                $path = $file->store('rooms/'.$room->id, 'public');
+
+                $room->images()->create([
+                    'path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'order' => $existingCount + $index,
+                ]);
+            }
         }
     }
 

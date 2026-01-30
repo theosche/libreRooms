@@ -153,7 +153,7 @@
                 <div class="signature">
                     <p class="signature-name">{{ $owner->contact->display_name() }}</p>
                     <p class="signature-details">
-                        {{ $owner->contact->street }}<br>
+                        {!! nl2br($owner->contact->street) !!}<br>
                         {{ $owner->contact->zip }} {{ $owner->contact->city }}
                     </p>
                 </div>

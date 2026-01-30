@@ -168,13 +168,12 @@
                             <span class="{{ $isOrganization ? 'hidden' : '' }}" data-show-when="{{ App\Enums\ContactTypes::INDIVIDUAL->value }}">Adresse</span>
                             <span class="{{ $isOrganization ? '' : 'hidden' }}" data-show-when="{{ App\Enums\ContactTypes::ORGANIZATION->value }}">Adresse de l'organisation</span>
                         </label>
-                        <input
-                            type="text"
+                        <textarea
+                            rows="2"
                             id="street"
                             name="street"
-                            value="{{ old('street', $contact?->street) }}"
                             required
-                        >
+                        >{{ old('street', $contact?->street) }}</textarea>
                         @error('street')
                             <span class="text-red-600 text-sm">{{ $message }}</span>
                         @enderror

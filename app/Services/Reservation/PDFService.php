@@ -226,7 +226,7 @@ class PDFService
         $qrBill->setUltimateDebtor(
             StructuredAddress::createWithStreet(
                 $tenant->display_name(),
-                $tenant->street,
+                preg_split("/\r\n|\r|\n/", $tenant->street)[0],
                 null,
                 $tenant->zip,
                 $tenant->city,

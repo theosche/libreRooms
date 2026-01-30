@@ -77,6 +77,9 @@
                     </div>
                     @break
             @endswitch
+            @error($field->key)
+                <span class="text-red-600 text-sm">{{ $message }}</span>
+            @enderror
         </fieldset>
     @endforeach
     </div>
