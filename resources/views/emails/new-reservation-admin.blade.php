@@ -1,13 +1,12 @@
 @extends('emails.layout')
 
 @section('content')
-    <h1>Votre demande de réservation</h1>
-
-    <p>Bonjour,</p>
+    <h1>Nouvelle demande de réservation</h1>
 
     <p>
-        Nous avons bien reçu votre demande de réservation de la salle <em>{{ $room->name }}</em>.
-        La réservation doit être validée par un·e admin. Vous recevrez ensuite un email de confirmation.
+        Une demande de réservation a été faite par
+        <em>{{ $reservation->tenant->display_name() }}</em> pour la salle
+        <em>{{ $room->name }}</em>.
     </p>
 
     <div class="highlight-box">
@@ -17,7 +16,7 @@
         @endif
     </div>
 
-    <h2>{{ $reservation->events->count() > 1 ? 'Dates préréservées' : 'Date préréservée' }}</h2>
+    <h2>Dates demandées</h2>
     <ul>
         @foreach ($reservation->events as $event)
             <li>
@@ -27,7 +26,9 @@
         @endforeach
     </ul>
 
-    <p>Pour toute question, n'hésitez pas à nous contacter en réponse à cet email.</p>
+    <p>Merci de contrôler la demande pour la confirmer ou la refuser :</p>
 
-    <p>Avec nos meilleures salutations,</p>
+    <p>
+        <a href="{{ route('reservations.edit', $reservation) }}" class="btn">Voir la demande</a>
+    </p>
 @endsection

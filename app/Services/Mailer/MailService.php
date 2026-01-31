@@ -29,10 +29,10 @@ class MailService
     {
         $room = $reservation->room;
         $owner = $room->owner;
-
+        $tenant = $reservation->tenant;
         $this->configureMailer($owner);
 
-        Mail::send('emails.new-reservation', [
+        Mail::send('emails.new-reservation-admin', [
             'reservation' => $reservation,
             'room' => $room,
             'owner' => $owner,
@@ -40,6 +40,16 @@ class MailService
             $message->from($owner->mailSettings()->user, $owner->contact->display_name())
                 ->to($this->redirectIfDebug($owner->contact->email), $owner->contact->display_name())
                 ->subject(ucfirst($room->name).' - Nouvelle demande de réservation à contrôler');
+        });
+        Mail::send('emails.new-reservation', [
+            'reservation' => $reservation,
+            'room' => $room,
+            'owner' => $owner,
+        ], function ($message) use ($room, $owner, $tenant) {
+            $message->from($owner->mailSettings()->user, $owner->contact->display_name())
+                ->to($this->redirectIfDebug($tenant->email), $tenant->display_name())
+                ->replyTo($owner->contact->email, $owner->contact->display_name())
+                ->subject(ucfirst($room->name).' - Votre demande de réservation');
         });
     }
 
@@ -61,6 +71,7 @@ class MailService
             $message->from($owner->mailSettings()->user, $owner->contact->display_name())
                 ->to($this->redirectIfDebug($tenant->bothEmailsUnique()))
                 ->cc($this->redirectIfDebug($owner->contact->email), $owner->contact->display_name())
+                ->replyTo($owner->contact->email, $owner->contact->display_name())
                 ->subject(ucfirst($room->name).' - Confirmation de réservation et facture (mail automatique)');
         });
     }
@@ -86,6 +97,7 @@ class MailService
             $message->from($owner->mailSettings()->user, $owner->contact->display_name())
                 ->to($this->redirectIfDebug($tenant->invoiceEmail()), $tenant->display_name())
                 ->cc($this->redirectIfDebug([$tenant->email, $owner->contact->email]))
+                ->replyTo($owner->contact->email, $owner->contact->display_name())
                 ->subject(ucfirst($room->name).' - Nouvelle facture (mail automatique)');
         });
     }
@@ -108,6 +120,7 @@ class MailService
             $message->from($owner->mailSettings()->user, $owner->contact->display_name())
                 ->to($this->redirectIfDebug($tenant->invoiceEmail()), $tenant->display_name())
                 ->cc($this->redirectIfDebug([$tenant->email, $owner->contact->email]))
+                ->replyTo($owner->contact->email, $owner->contact->display_name())
                 ->subject('Annulation de la facture '.$reservation->invoice->number.' (mail automatique)');
         });
     }
@@ -130,6 +143,7 @@ class MailService
             $message->from($owner->mailSettings()->user, $owner->contact->display_name())
                 ->to($this->redirectIfDebug($tenant->bothEmailsUnique()))
                 ->cc($this->redirectIfDebug($owner->contact->email), $owner->contact->display_name())
+                ->replyTo($owner->contact->email, $owner->contact->display_name())
                 ->subject(ucfirst($room->name).' - Annulation de votre réservation (mail automatique)');
         });
     }
@@ -153,6 +167,7 @@ class MailService
             $message->from($owner->mailSettings()->user, $owner->contact->display_name())
                 ->to($this->redirectIfDebug($tenant->invoiceEmail()), $tenant->display_name())
                 ->cc($this->redirectIfDebug([$tenant->email, $owner->contact->email]))
+                ->replyTo($owner->contact->email, $owner->contact->display_name())
                 ->subject("Location de {$room->name} - Facture à payer - {$invoice->formatedReminderCount()}");
         });
     }
