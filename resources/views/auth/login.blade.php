@@ -44,6 +44,9 @@
 
     <form method="POST" action="{{ route('login') }}" class="styled-form">
         @csrf
+        @if(!empty($intendedUrl))
+            <input type="hidden" name="intended_url" value="{{ $intendedUrl }}">
+        @endif
 
         <div class="form-group">
             <div class="form-element">

@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\IdentityProvider;
-use Illuminate\Support\Facades\Config;
-use Laravel\Socialite\Socialite;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\UserAuthProvider;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
+use Laravel\Socialite\Socialite;
 
 class OidcController extends Controller
 {
-    public function redirect(IdentityProvider $provider)
+    public function redirect(Request $request, IdentityProvider $provider)
     {
         abort_unless($provider->enabled, 404);
 
@@ -70,10 +70,17 @@ class OidcController extends Controller
             ]
         );
 
+        // Capture intended URL before session regeneration
+        $intendedUrl = session('url.intended');
+
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended('/');
+        // Determine redirect URL
+        $redirectUrl = $intendedUrl ?: route('rooms.index');
+
+        // Use query parameter for flash message (survives session regeneration)
+        return redirect($redirectUrl.(str_contains($redirectUrl, '?') ? '&' : '?').'login_success=1');
     }
 
     /**
@@ -123,14 +130,13 @@ class OidcController extends Controller
         return redirect($intended);
     }
 
-    private function injectConfig(IdentityProvider $provider) : void
+    private function injectConfig(IdentityProvider $provider): void
     {
-        Config::set('services.' . $provider->driver, [
-            'client_id'     => $provider->client_id,
+        Config::set('services.'.$provider->driver, [
+            'client_id' => $provider->client_id,
             'client_secret' => $provider->client_secret,
-            'redirect'      => route('auth.oidc.callback', $provider),
-            'instance_uri'  => $provider->issuer_url,
+            'redirect' => route('auth.oidc.callback', $provider),
+            'instance_uri' => $provider->issuer_url,
         ]);
     }
-
 }

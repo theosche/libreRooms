@@ -68,13 +68,24 @@
     });
 </script>
 
-@if(session('success'))
+@php
+    // Handle query parameter messages (for login/logout where session is regenerated)
+    $successMessage = session('success');
+    if (!$successMessage && request()->query('login_success')) {
+        $successMessage = 'Connexion réussie !';
+    }
+    if (!$successMessage && request()->query('logout_success')) {
+        $successMessage = 'Vous êtes maintenant déconnecté.';
+    }
+@endphp
+
+@if($successMessage)
     <div id="flash-success" class="flash-message flash-success">
         <div class="flash-content">
             <svg class="flash-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <span>{{ session('success') }}</span>
+            <span>{{ $successMessage }}</span>
         </div>
         <button type="button" class="flash-close" onclick="this.parentElement.remove()">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

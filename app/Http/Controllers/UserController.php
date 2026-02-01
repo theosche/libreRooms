@@ -2,30 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Enums\OwnerUserRoles;
 use App\Models\Owner;
+use App\Models\User;
+use App\Services\Settings\SettingsService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
-use App\Enums\OwnerUserRoles;
-use App\Services\Settings\SettingsService;
 
 class UserController extends Controller
 {
     /**
      * Show the login form
      */
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
         // Get enabled identity providers for OIDC login
         $identityProviders = \App\Models\IdentityProvider::where('enabled', true)->get();
 
+        // Capture the intended URL from Referer header (for public pages)
+        // Only if not already set by auth middleware and coming from same host
+        $intendedUrl = session('url.intended');
+        if (! $intendedUrl) {
+            $referer = $request->headers->get('referer');
+            if ($referer && parse_url($referer, PHP_URL_HOST) === $request->getHost()) {
+                // Don't redirect back to login/register pages
+                $refererPath = parse_url($referer, PHP_URL_PATH);
+                if (! in_array($refererPath, ['/login', '/register'])) {
+                    $intendedUrl = $referer;
+                    session(['url.intended' => $referer]);
+                }
+            }
+        }
+
         return view('auth.login', [
             'identityProviders' => $identityProviders,
+            'intendedUrl' => $intendedUrl,
         ]);
     }
 
@@ -39,10 +55,17 @@ class UserController extends Controller
             'password' => ['required'],
         ]);
 
+        // Capture intended URL before session regeneration
+        $intendedUrl = $request->input('intended_url') ?: session('url.intended');
+
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
 
-            return redirect()->intended('/')->with('success', 'Connexion réussie !');
+            // Determine redirect URL
+            $redirectUrl = $intendedUrl ?: route('rooms.index');
+
+            // Use query parameter for flash message (survives session regeneration)
+            return redirect($redirectUrl.(str_contains($redirectUrl, '?') ? '&' : '?').'login_success=1');
         }
 
         return back()->withErrors([
@@ -95,7 +118,8 @@ class UserController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/')->with('success', 'Vous êtes maintenant déconnecté.');
+        // Use query parameter for flash message (survives session invalidation)
+        return redirect(route('rooms.index').'?logout_success=1');
     }
 
     // ============================================
@@ -111,15 +135,15 @@ class UserController extends Controller
 
         // Filter by owner
         if ($request->filled('owner_id')) {
-            if ($request->input('owner_id') == "admin") {
+            if ($request->input('owner_id') == 'admin') {
                 $query->where(function ($q) {
                     $q->has('owners')
                         ->orWhere('is_global_admin', true);
                 });
-            } elseif ($request->input('owner_id') == "not_admin") {
+            } elseif ($request->input('owner_id') == 'not_admin') {
                 $query->whereDoesntHave('owners')
                     ->where('is_global_admin', false);
-            } elseif ($request->input('owner_id') == "global_admin") {
+            } elseif ($request->input('owner_id') == 'global_admin') {
                 $query->where('is_global_admin', true);
             } else {
                 $query->whereHas('owners', function ($q) use ($request) {
@@ -166,7 +190,7 @@ class UserController extends Controller
             'is_global_admin' => ['boolean'],
             'owners' => ['array'],
             'owners.*.id' => ['exists:owners,id'],
-            'owners.*.role' => ['in:' . implode(',', $roleValues)],
+            'owners.*.role' => ['in:'.implode(',', $roleValues)],
         ]);
 
         // Create user with email verified (admin created)
@@ -180,7 +204,7 @@ class UserController extends Controller
 
         // Sync owners with roles
         $ownerSync = [];
-        if (!empty($validated['owners'])) {
+        if (! empty($validated['owners'])) {
             foreach ($validated['owners'] as $ownerData) {
                 $ownerSync[$ownerData['id']] = ['role' => $ownerData['role']];
             }
@@ -214,12 +238,12 @@ class UserController extends Controller
         $roleValues = array_column(OwnerUserRoles::cases(), 'value');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'password' => ['nullable', 'confirmed', Password::min(12)],
             'is_global_admin' => ['boolean'],
             'owners' => ['array'],
             'owners.*.id' => ['exists:owners,id'],
-            'owners.*.role' => ['in:' . implode(',', $roleValues)],
+            'owners.*.role' => ['in:'.implode(',', $roleValues)],
         ]);
 
         // Update user
@@ -227,7 +251,7 @@ class UserController extends Controller
         $user->email = $validated['email'];
 
         // Empêcher un utilisateur de retirer son propre statut de global_admin
-        if ($user->id === auth()->id() && $user->is_global_admin && !$request->boolean('is_global_admin')) {
+        if ($user->id === auth()->id() && $user->is_global_admin && ! $request->boolean('is_global_admin')) {
             return redirect()->route('users.edit', $user)
                 ->with('error', 'Vous ne pouvez pas retirer votre propre statut d\'administrateur global.');
         }
@@ -243,7 +267,7 @@ class UserController extends Controller
 
         // Sync owners with roles (ajoute, met à jour et supprime selon les changements)
         $ownerSync = [];
-        if (!empty($validated['owners'])) {
+        if (! empty($validated['owners'])) {
             foreach ($validated['owners'] as $ownerData) {
                 $ownerSync[$ownerData['id']] = ['role' => $ownerData['role']];
             }
