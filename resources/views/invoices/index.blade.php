@@ -91,7 +91,7 @@
                     @php
                         $computedStatus = $invoice->computed_status;
                     @endphp
-                    <tr class="hover:bg-gray-50 cursor-pointer" onclick="toggleInvoiceDetails({{ $invoice->id }})">
+                    <tr class="hover:bg-gray-50 details-on-mobile" onclick="toggleInvoiceDetails({{ $invoice->id }})">
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">
                             <a href="{{ route($invoice->reminder_count ? 'reservations.reminder.pdf' : 'reservations.invoice.pdf',
                                                 $invoice->reservation->hash) }}"
@@ -242,7 +242,12 @@
 <script>
     function toggleInvoiceDetails(invoiceId) {
         const detailsRow = document.getElementById('invoice-details-' + invoiceId);
-        if (detailsRow) {
+        const hideOnMobile = document.getElementsByClassName("hide-on-mobile");
+        if (!detailsRow || hideOnMobile.length === 0) {
+            return;
+        }
+        const isMobileView = getComputedStyle(hideOnMobile[0]).getPropertyValue('display') === 'none';
+        if (isMobileView) {
             detailsRow.classList.toggle('hidden');
         }
     }
