@@ -1,0 +1,32 @@
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName librerooms.example.com
+    ServerAdmin webmaster@localhost
+    DocumentRoot "/var/www/html/libreRooms/public"
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+    Include /etc/letsencrypt/options-ssl-apache.conf
+
+    <Directory "/var/www/html/libre-rooms/public">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    SSLCertificateFile /etc/letsencrypt/live/<certificate>/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/<certificate>/privkey.pem
+</VirtualHost>
+</IfModule>
+
+<VirtualHost *:80>
+    ServerName librerooms.example.com
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html/libre-rooms/public
+    ErrorLog ${APACHE_LOG_DIR}/error.log
+    CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+    RewriteEngine on
+    RewriteCond %{SERVER_NAME} = librerooms.example.com
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
