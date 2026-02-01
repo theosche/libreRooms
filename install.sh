@@ -28,4 +28,4 @@ echo "2. Diriger un serveur web vers le dossier public/"
 echo "3. Configurer  LibreRooms en y accédant depuis un navigateur"
 echo "4. Ajouter le scheduler dans cron (user www-data) - par ex:"
 echo '   sudo crontab -u www-data -e'
-echo '   * * * * * cd /var/www/html/libre-rooms && php artisan schedule:run >> /dev/null 2>&1'
+echo '   * * * * * cd /var/www/html/libreRooms && php artisan schedule:run >> /dev/null 2>&1'
