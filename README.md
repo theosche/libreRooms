@@ -1,5 +1,7 @@
 # LibreRooms
 
+> **[ENGLISH BELOW](#english-version)**
+
 **LibreRooms** est une web-app open source de gestion de réservation de salles, développée en Laravel. Elle permet aux organisations de mettre à disposition leurs espaces (salles de réunion, locaux associatifs) et de gérer les réservations de manière simple et efficace.
 
 
@@ -115,3 +117,124 @@ Ce projet est distribué sous licence GNU GENERAL PUBLIC LICENSE.
 
 ## Contribution
 Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un pull request sur GitHub.
+
+---
+
+<a id="english-version"></a>
+
+# LibreRooms
+
+**LibreRooms** is an open-source room booking management web app, built with Laravel. It allows organizations to make their spaces available (meeting rooms, community venues) and manage bookings in a simple and efficient way.
+
+<img src="docs/images/librerooms-1.png" height="45%" width="45%" > <img src="docs/images/librerooms-2.png" height="45%" width="45%" >
+<img src="docs/images/librerooms-3.png" height="45%" width="45%" > <img src="docs/images/librerooms-4.png" height="45%" width="45%" >
+
+## Features
+### Owners
+- Management of multiple room owners, each with their own configuration, invoicing options, currency, etc.
+- Each owner can have multiple users: viewers (can see private rooms), moderators (can manage bookings), administrators (can create/edit rooms, edit the owner)
+
+### Rooms
+- Easy room creation, with many customization options (description, location, images, charter)
+- Room listing page and room presentation page
+- Configurable pricing (short booking, full day), with the option to define a pay-what-you-want model
+- "Secret" feature to share access codes via a time-limited link
+- Public or restricted room visibility
+- Ability to add custom fields to the booking form for each room
+- Ability to add paid options for the room, selectable per event during a booking (projector usage, kitchen access...)
+- Ability to add discounts for the room (fixed or percentage) - e.g. "Non-profit organization"
+- Room management across different timezones
+
+### Bookings
+- Interactive calendar with availability visualization
+- Multi-day and multi-slot bookings
+- Validation workflow (pending / confirmed / cancelled / finished)
+- PDF document generation (confirmations, invoices)
+- Email notifications (confirmation, reminder, cancellation) for owners and tenants
+- Bookings possible with or without an account
+- "Additional donation" option
+- "Special discount" option (that the owner can grant)
+
+### Invoicing
+- Basic invoicing management (due date tracking, ability to send reminders)
+- Invoice generation with payment data in the following formats: SEPA with QR code, Swiss QR-bill, International (IBAN/BIC)
+- Invoice cancellation / recreation possible independently of bookings
+
+### Integrations
+- **CalDAV**: Bidirectional sync with external calendars (e.g. to block a room without going through the booking system)
+- **WebDAV**: Storage of confirmation and invoice PDFs on a remote server
+- **OIDC**: SSO authentication via external identity providers (Nextcloud OIDC implemented) - account merging based on email
+
+### User management
+- Account creation / editing / email verification / password reset
+- Privilege hierarchy: global admins, owner admins, moderators (per owner), viewers (per owner)
+- Unprivileged accounts (allows pre-filling contact details and viewing own bookings)
+
+### Contacts
+- Creation of "Contacts": individuals or organizations with contact details
+- "Contacts" can be used as tenant details during a booking (pre-filling for regular tenants)
+- Owners are also associated with a "Contact"
+- "Contacts" can be shared between multiple users
+
+### Configuration
+- Ability to define default system configurations usable by owners (CalDAV, WebDAV settings, etc.)
+- Identity provider management
+- Initial environment setup interface (database)
+
+### Mobile views
+- Mobile-friendly views
+
+## Prerequisites
+- PHP 8.2+
+- Composer 2.x
+- Node.js 20+ and npm
+- SQLite/MariaDB/MySQL/PostgreSQL
+- Apache or Nginx
+- (Optional) CalDAV server for calendar synchronization
+- (Optional) WebDAV server for document synchronization
+
+## Installation
+### 1. Install the application
+```bash
+git clone https://github.com/theosche/libre-rooms
+cd libreRooms
+./install.sh
+```
+
+### 2. Create the database (example)
+```sql
+CREATE DATABASE librerooms;
+CREATE USER 'librerooms'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL PRIVILEGES ON librerooms.* TO 'librerooms'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### 3. Configure a web server
+Point a web server to /project/path/public
+Example Apache vhost config [here](docs/apache/apacheVhost.librerooms.conf.example).
+
+### 4. Add a crontab entry for scheduled tasks
+```bash
+sudo crontab -u www-data -e
+* * * * * cd /var/www/html/libreRooms && php artisan schedule:run >> /dev/null 2>&1
+```
+
+### 5. Initial setup
+Access the application through your browser. A setup wizard will guide you through:
+
+1. Connecting the database and setting the environment parameters
+2. Creating a global admin account
+3. Configuring the required system settings
+
+## Usage
+### Getting started
+1. **Create a contact**: Before creating the first owner, you need to create the contact that will be associated with it
+2. **Create an owner**
+3. **Create a room**: Associate a room with the new owner. Configure the various settings. Add options, discounts, or custom fields if desired
+4. **You're all set!** Users can view the room and book it.
+
+## License
+This project is distributed under the GNU GENERAL PUBLIC LICENSE.
+
+## Contributing
+Contributions are welcome! Feel free to open an issue or a pull request on GitHub.
