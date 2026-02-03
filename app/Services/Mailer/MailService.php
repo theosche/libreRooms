@@ -168,7 +168,7 @@ class MailService
                 ->to($this->redirectIfDebug($tenant->invoiceEmail()), $tenant->display_name())
                 ->cc($this->redirectIfDebug([$tenant->email, $owner->contact->email]))
                 ->replyTo($owner->contact->email, $owner->contact->display_name())
-                ->subject(__('Rental of :room - Invoice to pay - :reminder', ['room' => $room->name, 'reminder' => $invoice->formatedReminderCount()]));
+                ->subject(__('Rental of :room - Invoice to pay - :reminder', ['room' => $room->name, 'reminder' => $invoice->formattedReminderCount()]));
         });
     }
 
