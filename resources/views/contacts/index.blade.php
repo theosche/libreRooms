@@ -138,11 +138,11 @@
                                         @csrf
                                         @method('DELETE')
                                         @if($userOwnsContact && $contact->users->where('id', '!=', $user->id)->count() > 0)
-                                            <button type="submit" class="link-danger" onclick="return confirm(__('Are you sure you want to remove this contact from your list? Other users also have access to it, it will not be permanently deleted.'))">
+                                            <button type="submit" class="link-danger" onclick="return confirm('{{ __('Are you sure you want to remove this contact from your list? Other users also have access to it, it will not be permanently deleted.') }}')">
                                                 {{ __('Remove') }}
                                             </button>
                                         @else
-                                            <button type="submit" class="link-danger" onclick="return confirm(__('Are you sure you want to permanently delete this contact? This action cannot be undone.'))">
+                                            <button type="submit" class="link-danger" onclick="return confirm('{{ __('Are you sure you want to permanently delete this contact? This action cannot be undone.') }}')">
                                                 {{ __('Delete') }}
                                             </button>
                                         @endif

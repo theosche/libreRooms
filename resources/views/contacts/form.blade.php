@@ -236,7 +236,7 @@
 </div>
 <script>
     function confirmDeleteContact() {
-        if (confirm(__('Are you sure you want to delete this contact?'))) {
+        if (confirm('{{ __('Are you sure you want to delete this contact?') }}')) {
             document.getElementById('delete-contact-form').submit();
         }
     }

@@ -158,7 +158,7 @@
 @if(isset($provider))
 <script>
     function confirmDeleteProvider() {
-        if (confirm(@json(__('Are you sure you want to delete this identity provider? Linked users will no longer be able to log in via this provider.')))) {
+        if (confirm('{{ __('Are you sure you want to delete this identity provider? Linked users will no longer be able to log in via this provider.') }}')) {
             document.getElementById('delete-provider-form').submit();
         }
     }
