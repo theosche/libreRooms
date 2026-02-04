@@ -148,7 +148,7 @@ class OwnerRules
         if ($mailFieldsRequired) {
             // Required if no password set yet (otherwise nullable to allow users to keep the same password)
             if (! $owner?->mail_pass || ! empty($request->input('mail_pass'))) {
-                $rules['webdav_pass'] = ['required', 'string', 'max:255'];
+                $rules['mail_pass'] = ['required', 'string', 'max:255'];
             }
             // Otherwise, keep password unchanged, don't include a new password in validated request
         } else {
@@ -223,7 +223,6 @@ class OwnerRules
                 $rules['payment_besr_id'] = ['nullable', 'string', 'regex:/^\d{1,6}$/'];
             }
         }
-
         return $rules;
     }
 }

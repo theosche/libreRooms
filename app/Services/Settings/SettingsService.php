@@ -15,7 +15,7 @@ class SettingsService
     public function __construct() {
         $this->systemSettings = app(SystemSettings::class);
     }
-    protected function value(string $key, Room $room = null, Owner $org = null): mixed
+    protected function value(string $key, ?Room $room = null, ?Owner $org = null): mixed
     {
         return $room?->{$key}
             ?? $org?->{$key}

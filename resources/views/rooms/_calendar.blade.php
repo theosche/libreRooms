@@ -112,7 +112,7 @@
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
                 buttonText: {
-                    today:    '{{ __('today') }}',
+                    today:    "{!! __('today') !!}",
                     month:    '{{ __('month') }}',
                     week:     '{{ __('week') }}',
                     day:      '{{ __('day') }}',
