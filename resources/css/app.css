@@ -831,6 +831,10 @@ div.container-full-form {
     gap: 0.25rem;
 }
 
+.contact-info > a {
+    width: fit-content;
+}
+
 .contact-info-name {
     font-weight: 500;
 }
