@@ -37,8 +37,9 @@ class RoomDiscountController extends Controller
             });
 
         // Filter by room
-        if ($request->filled('room_id')) {
-            $query->where('room_id', $request->input('room_id'));
+        $currentRoomId = $request->input('room_id');
+        if ($currentRoomId) {
+            $query->where('room_id', $currentRoomId);
         }
 
         $query->orderBy('room_id', 'asc')->orderBy('name', 'asc');
@@ -53,13 +54,14 @@ class RoomDiscountController extends Controller
         return view('room-discounts.index', [
             'discounts' => $discounts,
             'rooms' => $rooms,
+            'currentRoomId' => $currentRoomId,
         ]);
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
         $user = auth()->user();
         // Check if user has admin rights for at least one owner
@@ -78,6 +80,7 @@ class RoomDiscountController extends Controller
         return view('room-discounts.form', [
             'discount' => null,
             'rooms' => $rooms,
+            'currentRoomId' => $request->input('room_id'),
         ]);
     }
 

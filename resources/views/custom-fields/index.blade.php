@@ -7,7 +7,7 @@
     <div class="page-header">
         <h1 class="page-header-title">{{ __('Custom fields') }}</h1>
 
-        @include('rooms._submenu', ['view' => null])
+        @include('rooms._submenu', ['view' => null, 'currentRoomId' => $currentRoomId])
     </div>
 
     <!-- Filtres -->

@@ -31,7 +31,7 @@
                         <select name="room_id" id="room_id" required>
                             <option value="">{{ __('Select a room') }}</option>
                             @foreach($rooms as $room)
-                                <option value="{{ $room->id }}" @selected(old('room_id', $field?->room_id) == $room->id)>
+                                <option value="{{ $room->id }}" @selected(old('room_id', $field?->room_id ?? $currentRoomId) == $room->id)>
                                     {{ $room->name }} ({{ $room->owner->contact->display_name() }})
                                 </option>
                             @endforeach

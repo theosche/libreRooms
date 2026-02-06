@@ -19,11 +19,30 @@
                 {{ __('Back to rooms') }}
             </a>
             <span class="page-submenu-separator"></span>
-            @if($canReserve)
+            @can('reserve', $room)
                 <a href="{{ route('reservations.create', $room) }}" class="page-submenu-item page-submenu-action">
                     {{ __('Reserve this room') }}
                 </a>
-            @endif
+            @endcan
+            @can('update', $room)
+                <span class="page-submenu-separator"></span>
+                <a href="{{ route('room-discounts.index', ['room_id'=>$room->id]) }}"
+                   class="page-submenu-item page-submenu-nav">
+                    {{ __('Discounts') }}
+                </a>
+                <a href="{{ route('room-options.index', ['room_id'=>$room->id]) }}"
+                   class="page-submenu-item page-submenu-nav">
+                    {{ __('Options') }}
+                </a>
+                <a href="{{ route('custom-fields.index', ['room_id'=>$room->id]) }}"
+                   class="page-submenu-item page-submenu-nav">
+                    {{ __('Custom fields') }}
+                </a>
+                <a href="{{ route('room-unavailabilities.index', ['room_id'=>$room->id]) }}"
+                   class="page-submenu-item page-submenu-nav">
+                    {{ __('Unavailabilities') }}
+                </a>
+            @endcan
         </nav>
     </div>
 
@@ -135,24 +154,24 @@
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Pricing') }}</h3>
 
-                @if($room->price_mode->value === 'fixed')
-                    <div class="space-y-3">
-                        @if($room->price_short && $room->max_hours_short)
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">{{ $room->shortPriceRuleLabel() }}</span>
-                                <span class="text-gray-900 font-medium">{{ currency($room->price_short, $room->owner) }}</span>
-                            </div>
-                        @endif
-                        <div class="flex justify-between text-sm">
-                            <span class="text-gray-600">{{ __('Full day') }}</span>
-                            <span class="text-gray-900 font-medium">{{ currency($room->price_full_day, $room->owner) }}</span>
-                        </div>
-                    </div>
-                @elseif($room->price_mode->value === 'free')
+                @if($room->price_mode->value === 'free')
                     <span class="px-3 py-1.5 bg-green-100 text-green-700 text-sm font-medium rounded-full">
                         {{ __('Free contribution') }}
                     </span>
+                    <h4 class="text-sm font-medium text-gray-900 mb-2 mt-4">{{ __('Recommended rate:') }}</h4>
                 @endif
+                <div class="space-y-3">
+                    @if($room->price_short && $room->max_hours_short)
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">{{ $room->shortPriceRuleLabel() }}</span>
+                            <span class="text-gray-900 font-medium">{{ currency($room->price_short, $room->owner) }}</span>
+                        </div>
+                    @endif
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">{{ __('Full day') }}</span>
+                        <span class="text-gray-900 font-medium">{{ currency($room->price_full_day, $room->owner) }}</span>
+                    </div>
+                </div>
 
                 @if($room->discounts->where('active', true)->count() > 0)
                     <div class="mt-4 pt-4 border-t border-gray-200">

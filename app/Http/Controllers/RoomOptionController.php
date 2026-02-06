@@ -37,8 +37,9 @@ class RoomOptionController extends Controller
             });
 
         // Filter by room
-        if ($request->filled('room_id')) {
-            $query->where('room_id', $request->input('room_id'));
+        $currentRoomId = $request->input('room_id');
+        if ($currentRoomId) {
+            $query->where('room_id', $currentRoomId);
         }
 
         $query->orderBy('room_id', 'asc')->orderBy('name', 'asc');
@@ -53,13 +54,14 @@ class RoomOptionController extends Controller
         return view('room-options.index', [
             'options' => $options,
             'rooms' => $rooms,
+            'currentRoomId' => $currentRoomId,
         ]);
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
         $user = auth()->user();
 
@@ -79,6 +81,7 @@ class RoomOptionController extends Controller
         return view('room-options.form', [
             'option' => null,
             'rooms' => $rooms,
+            'currentRoomId' => $request->input('room_id'),
         ]);
     }
 

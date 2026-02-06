@@ -191,9 +191,8 @@ class RoomController extends Controller
 
         $user = auth()->user();
         $isAdmin = $user && $user->isAdminOf($room->owner);
-        $canReserve = $room->active && $room->isAccessibleBy($user);
 
-        return view('rooms.show', compact('room', 'user', 'isAdmin', 'canReserve'));
+        return view('rooms.show', compact('room', 'user', 'isAdmin'));
     }
 
     /**
