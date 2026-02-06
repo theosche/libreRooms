@@ -28,6 +28,7 @@ return new class extends Migration
             $table->boolean('is_public')->default(true);
 
             $table->string('price_mode');
+            $table->text('free_price_explanation')->nullable();
             $table->integer('price_short')->nullable();
             $table->integer('price_full_day');
             $table->integer('max_hours_short')->nullable();
@@ -37,6 +38,9 @@ return new class extends Migration
 
             $table->integer('reservation_cutoff_days')->nullable();
             $table->integer('reservation_advance_limit')->nullable();
+            $table->json('allowed_weekdays')->nullable();
+            $table->time('day_start_time')->nullable();
+            $table->time('day_end_time')->nullable();
 
             $table->boolean('use_special_discount')->default(false);
             $table->boolean('use_donation')->default(false);
@@ -46,6 +50,7 @@ return new class extends Migration
             $table->text('custom_message')->nullable();
 
             $table->text('secret_message')->nullable();
+            $table->unsignedInteger('secret_message_days_before')->nullable();
 
             $table->string('external_slot_provider')->nullable();
             $table->string('dav_calendar')->nullable();

@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('website')->nullable();
             $table->foreignId('contact_id')->constrained()->ondelete('cascade');
+            $table->boolean('hide_email')->default(false);
+            $table->boolean('hide_phone')->default(false);
 
             $table->string('invoice_due_mode');
             $table->integer('invoice_due_days');
