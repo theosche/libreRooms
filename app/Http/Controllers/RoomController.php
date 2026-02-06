@@ -238,7 +238,7 @@ class RoomController extends Controller
 
             if ($currentUnavailability) {
                 $status = RoomCurrentStatus::UNAVAILABLE;
-                $freeFrom = $this->findNextFreeTime($room, $currentUnavailability->end->copy(), $timezone, $busySlots);
+                $freeFrom = $this->findNextFreeTime($room, $currentUnavailability->end, $timezone, $busySlots);
             }
         }
 
@@ -369,11 +369,11 @@ class RoomController extends Controller
                 continue;
             }
 
-            // Check for unavailability at this time (DB is UTC)
+            // Check for unavailability at this time (use UTC accessors)
             $nextUnavail = $room->unavailabilities
                 ->first(fn ($u) => $u->start <= $current && $u->end > $current);
             if ($nextUnavail) {
-                $current = $nextUnavail->end->copy();
+                $current = $nextUnavail->end;
 
                 continue;
             }
@@ -414,10 +414,10 @@ class RoomController extends Controller
             $limits[] = $nextSlot['start'];
         }
 
-        // Next unavailability (DB is UTC)
+        // Next unavailability (use UTC accessors)
         $nextUnavail = $room->unavailabilities
             ->filter(fn ($u) => $u->start > $fromUtc)
-            ->sortBy('start')
+            ->sortBy(fn ($u) => $u->start)
             ->first();
 
         if ($nextUnavail) {

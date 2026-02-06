@@ -31,6 +31,10 @@ class AvailabilityService
         if (empty($fullIcs)) {
             return [];
         }
+
+        // Save current timezone - IcalParser has a bug that changes the global timezone
+        $originalTimezone = date_default_timezone_get();
+
         $parser = new IcalParser;
         $parser->parseString($fullIcs);
         $busySlots = array_map(function ($e) use ($timezone) {
@@ -44,6 +48,9 @@ class AvailabilityService
         },
             (array) ($parser->getEvents())
         );
+
+        // Restore original timezone
+        date_default_timezone_set($originalTimezone);
 
         return $busySlots;
     }
