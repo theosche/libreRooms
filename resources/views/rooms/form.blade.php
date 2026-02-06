@@ -528,6 +528,76 @@
                         </div>
                     </div>
                 </fieldset>
+
+                <!-- Booking rules -->
+                <fieldset class="form-element">
+                    <div class="form-field">
+                        <label class="form-element-title">{{ __('Allowed booking days') }}</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+                            @php
+                                $weekdays = [
+                                    1 => __('Monday'),
+                                    2 => __('Tuesday'),
+                                    3 => __('Wednesday'),
+                                    4 => __('Thursday'),
+                                    5 => __('Friday'),
+                                    6 => __('Saturday'),
+                                    7 => __('Sunday'),
+                                ];
+                                $allowedWeekdays = old('allowed_weekdays', $room?->allowed_weekdays ?? []);
+                                // If null (all days allowed), check all boxes
+                                $allDaysAllowed = is_null($room?->allowed_weekdays) && !old('allowed_weekdays');
+                            @endphp
+                            @foreach($weekdays as $day => $label)
+                                <label class="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        name="allowed_weekdays[]"
+                                        value="{{ $day }}"
+                                        @checked($allDaysAllowed || in_array($day, $allowedWeekdays))
+                                    >
+                                    <span>{{ $label }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <small class="text-gray-600">{{ __('If none selected, all days are allowed.') }}</small>
+                        @error('allowed_weekdays')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                    </div>
+                </fieldset>
+
+                <fieldset class="form-element">
+                    <div class="form-element-row">
+                        <div class="form-field">
+                            <label for="day_start_time" class="form-element-title">{{ __('Day start time') }}</label>
+                            <input
+                                type="time"
+                                id="day_start_time"
+                                name="day_start_time"
+                                value="{{ old('day_start_time', $room?->day_start_time ? substr($room->day_start_time, 0, 5) : '') }}"
+                            >
+                            <small class="text-gray-600">{{ __('Leave empty to disable') }}</small>
+                            @error('day_start_time')
+                                <span class="text-red-600 text-sm">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="form-field">
+                            <label for="day_end_time" class="form-element-title">{{ __('Day end time') }}</label>
+                            <input
+                                type="time"
+                                id="day_end_time"
+                                name="day_end_time"
+                                value="{{ old('day_end_time', $room?->day_end_time ? substr($room->day_end_time, 0, 5) : '') }}"
+                            >
+                            <small class="text-gray-600">{{ __('Leave empty to disable') }}</small>
+                            @error('day_end_time')
+                                <span class="text-red-600 text-sm">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+                </fieldset>
             </div>
 
             <!-- Charte -->
@@ -597,6 +667,23 @@
                         @enderror
                     </div>
                 </fieldset>
+
+                <fieldset class="form-element">
+                    <div class="form-field">
+                        <label for="secret_message_days_before" class="form-element-title">{{ __('Secret message visible X days before events') }}</label>
+                        <input
+                            type="number"
+                            id="secret_message_days_before"
+                            name="secret_message_days_before"
+                            min="1"
+                            value="{{ old('secret_message_days_before', $room?->secret_message_days_before) }}"
+                        >
+                        <small class="text-gray-600">{{ __('If empty, the secret message is always visible for confirmed reservations.') }}</small>
+                        @error('secret_message_days_before')
+                            <span class="text-red-600 text-sm">{{ $message }}</span>
+                        @enderror
+                    </div>
+                </fieldset>
             </div>
 
             <!-- Configuration Calendrier -->
@@ -651,9 +738,12 @@
                     <div class="form-field">
                         <label for="calendar_view_mode" class="form-element-title">{{ __('Calendar display mode') }}</label>
                         <select name="calendar_view_mode" id="calendar_view_mode">
-                            <option value="slot" @selected(old('calendar_view_mode', $room?->calendar_view_mode?->value ?? 'slot') == 'slot')>{{ __('Slots only') }}</option>
-                            <option value="title" @selected(old('calendar_view_mode', $room?->calendar_view_mode?->value) == 'title')>{{ __('Event title') }}</option>
-                            <option value="full" @selected(old('calendar_view_mode', $room?->calendar_view_mode?->value) == 'full')>{{ __('Full') }}</option>
+                            @php
+                                $selected = old('calendar_view_mode', $room?->calendar_view_mode?->value ?? App\Enums\CalendarViewModes::SLOT->value);
+                            @endphp
+                            @foreach(App\Enums\CalendarViewModes::cases() as $mode)
+                                <option value="{{ $mode->value }}" @selected( $mode->value === $selected )>{{ $mode->label() }}</option>
+                            @endforeach
                         </select>
                         @error('calendar_view_mode')
                             <span class="text-red-600 text-sm">{{ $message }}</span>

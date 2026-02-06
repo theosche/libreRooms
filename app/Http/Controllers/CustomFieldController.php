@@ -6,10 +6,10 @@ use App\Models\CustomField;
 use App\Models\Owner;
 use App\Models\Room;
 use App\Validation\CustomFieldRules;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class CustomFieldController extends Controller
 {
@@ -20,10 +20,7 @@ class CustomFieldController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user has admin rights for at least one owner
-        $canViewMine = $user && ($user->is_global_admin || $user->owners()->wherePivot('role', 'admin')->exists());
-
-        if (!$canViewMine) {
+        if (! $user?->canAdminAnyOwner()) {
             abort(403, __('You must be an administrator of at least one owner to access this page.'));
         }
 
@@ -57,8 +54,6 @@ class CustomFieldController extends Controller
         return view('custom-fields.index', [
             'customFields' => $customFields,
             'rooms' => $rooms,
-            'user' => $user,
-            'canViewMine' => $canViewMine,
         ]);
     }
 
@@ -70,7 +65,7 @@ class CustomFieldController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for at least one owner
-        if (!$user->is_global_admin && !$user->owners()->wherePivot('role', 'admin')->exists()) {
+        if (! $user?->canAdminAnyOwner()) {
             abort(403, __('You must be an administrator of at least one owner to create a custom field.'));
         }
 
@@ -93,34 +88,25 @@ class CustomFieldController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $user = auth()->user();
-
-        // Validate
+        // Validate (incl. permission check)
         $validated = $request->validate(CustomFieldRules::rules());
 
-        // Check if user has admin rights for the selected room's owner
-        $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (!$user->is_global_admin && !$user->isAdminOf($room->owner)) {
-            return redirect()->route('custom-fields.index')
-                ->with('error', __('You do not have administration rights for this owner.'));
-        }
-
         // Generate key from label
-        $baseKey = 'cf_' . Str::slug($validated['label']);
+        $baseKey = 'cf_'.Str::slug($validated['label']);
         $validated['key'] = Str::limit($baseKey, 50, '');
 
         // Ensure key is unique for this room
         $counter = 1;
         while (CustomField::where('room_id', $validated['room_id'])->where('key', $validated['key'])->exists()) {
-            $validated['key'] = Str::limit($baseKey . '-' . $counter, 50, '');
+            $validated['key'] = Str::limit($baseKey.'-'.$counter, 50, '');
             $counter++;
         }
 
         // Process options if present (textarea with one option per line)
-        if (!empty($validated['options'])) {
+        if (! empty($validated['options'])) {
             $options = array_filter(
                 array_map('trim', explode("\n", $validated['options'])),
-                fn($option) => $option !== ''
+                fn ($option) => $option !== ''
             );
             $validated['options'] = array_values($options);
         } else {
@@ -147,7 +133,7 @@ class CustomFieldController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for this field's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($customField->room->owner)) {
+        if (! $user->isAdminOf($customField->room->owner)) {
             abort(403, __('You do not have administration rights for this custom field.'));
         }
 
@@ -172,25 +158,19 @@ class CustomFieldController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user has admin rights for this field's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($customField->room->owner)) {
-            return redirect()->route('custom-fields.index')
-                ->with('error', __('You do not have administration rights for this custom field.'));
-        }
-
         // Validate
         $validated = $request->validate(CustomFieldRules::rules($customField->id));
 
         // Check if user has admin rights for the selected room's owner (in case it changed)
         $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (!$user->is_global_admin && !$user->isAdminOf($room->owner)) {
+        if (! $user->is_global_admin && ! $user->isAdminOf($room->owner)) {
             return redirect()->route('custom-fields.index')
                 ->with('error', __('You do not have administration rights for the new owner.'));
         }
 
         // Regenerate key from label if label changed
         if ($validated['label'] !== $customField->label) {
-            $baseKey = 'cf_' . Str::slug($validated['label']);
+            $baseKey = 'cf_'.Str::slug($validated['label']);
             $validated['key'] = Str::limit($baseKey, 50, '');
 
             // Ensure key is unique for this room
@@ -199,16 +179,16 @@ class CustomFieldController extends Controller
                 ->where('key', $validated['key'])
                 ->where('id', '!=', $customField->id)
                 ->exists()) {
-                $validated['key'] = Str::limit($baseKey . '-' . $counter, 50, '');
+                $validated['key'] = Str::limit($baseKey.'-'.$counter, 50, '');
                 $counter++;
             }
         }
 
         // Process options if present (textarea with one option per line)
-        if (!empty($validated['options'])) {
+        if (! empty($validated['options'])) {
             $options = array_filter(
                 array_map('trim', explode("\n", $validated['options'])),
-                fn($option) => $option !== ''
+                fn ($option) => $option !== ''
             );
             $validated['options'] = array_values($options);
         } else {
@@ -235,7 +215,7 @@ class CustomFieldController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for this field's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($customField->room->owner)) {
+        if (! $user->isAdminOf($customField->room->owner)) {
             return redirect()->route('custom-fields.index')
                 ->with('error', __('You do not have administration rights for this custom field.'));
         }

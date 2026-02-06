@@ -61,6 +61,16 @@
         .fc-toolbar-chunk {
             display: flex;
         }
+        /* Style for non-business hours */
+        .fc-non-business {
+            background: repeating-linear-gradient(
+                45deg,
+                #f3f4f6,
+                #f3f4f6 10px,
+                #e5e7eb 10px,
+                #e5e7eb 20px
+            ) !important;
+        }
     </style>
 @endonce
 
@@ -87,23 +97,32 @@
             // Check if we're on a reservation form page (reservation-form.js will load the data)
             const isReservationForm = typeof window.RoomConfig !== 'undefined';
 
-            let events = [];
+            let calendarEvents = [];
+            let unavailabilities = [];
+            let businessHours = false;
+
             if (isReservationForm) {
                 // Wait for reservation-form.js to load the data (avoids duplicate fetch)
                 while (!window.calendarEventsData) {
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
-                events = window.calendarEventsData || [];
+                const data = window.calendarEventsData;
+                // Handle both old format (array) and new format (object)
+                calendarEvents = data.events || data;
+                unavailabilities = data.unavailabilities || [];
+                businessHours = data.businessHours || false;
             } else {
                 // Not on reservation form - fetch directly
                 try {
                     const response = await fetch('{{ route('rooms.availability', $room) }}');
-                    events = await response.json();
+                    const data = await response.json();
+                    calendarEvents = data.events;
+                    unavailabilities = data.unavailabilities || [];
+                    businessHours = data.businessHours || false;
                 } catch (error) {
                     console.error('Error loading events:', error);
                 }
             }
-
             const calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 headerToolbar: {
@@ -120,15 +139,18 @@
                 },
                 locale: '{{ app()->getLocale() }}',
                 firstDay: 1, // Lundi
-                timeZone: '{{ $room->timezone ?? "Europe/Zurich" }}',
+                timeZone: '{{ $room->getTimezone() }}',
                 eventTimeFormat: {
                     hour: '2-digit',
                     minute: '2-digit',
                     hour12: false
                 },
 
-                // Use fetched events
-                events: events,
+                // Use fetched events + unavailabilities as background events
+                events: [...calendarEvents, ...unavailabilities],
+
+                // Business hours from room configuration
+                businessHours: businessHours,
 
                 // Afficher un tooltip avec la description
                 eventDidMount: function(info) {

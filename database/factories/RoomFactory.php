@@ -47,6 +47,15 @@ class RoomFactory extends Factory
             'allow_late_end_hour' => fake()->numberBetween(0, 7),
             'reservation_cutoff_days' => fake()->optional()->numberBetween(1, 7),
             'reservation_advance_limit' => fake()->optional()->numberBetween(90, 700),
+            'allowed_weekdays' => fake()->boolean(50)
+                ? collect(range(1, 7))->random(fake()->numberBetween(1, 7))->sort()->values()->toArray()
+                : null,
+            'day_start_time' => fn (array $attributes) => $attributes['allowed_weekdays']
+                ? sprintf('%02d:00', fake()->numberBetween(5, 9))
+                : null,
+            'day_end_time' => fn (array $attributes) => $attributes['allowed_weekdays']
+                ? sprintf('%02d:00', fake()->numberBetween(20, 23))
+                : null,
             'use_special_discount' => fake()->boolean(30),
             'use_donation' => fake()->boolean(30),
             'charter_mode' => fake()->randomElement([CharterModes::TEXT, CharterModes::LINK, CharterModes::NONE]),

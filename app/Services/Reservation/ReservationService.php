@@ -12,12 +12,12 @@ use App\Models\Room;
 use App\Models\User;
 use App\Services\Caldav\CaldavClient;
 use App\Services\Mailer\MailService;
-use App\Services\Settings\SettingsService;
 use App\Services\Webdav\WebdavUploader;
 use App\Support\DateHelper;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+
 use function Illuminate\Support\defer;
 
 class ReservationService
@@ -133,9 +133,9 @@ class ReservationService
                 }
             }
             // Send appropriate email
-            if ($isConfirmed && !$room->disable_mailer) {
+            if ($isConfirmed && ! $room->disable_mailer) {
                 $this->mail->sendConfirmation($reservation);
-            } elseif(!$room->disable_mailer) {
+            } elseif (! $room->disable_mailer) {
                 $this->mail->sendNewReservation($reservation);
             }
         });
@@ -150,7 +150,7 @@ class ReservationService
 
         if ($action === 'confirm') {
             // Already set status confirmed in updateReservationData to avoid doing caldav updates twice
-            $this->updateReservationData($request, $reservation, $user, confirm:true);
+            $this->updateReservationData($request, $reservation, $user, confirm: true);
 
             return $this->confirm($reservation, $user);
         }
@@ -168,7 +168,7 @@ class ReservationService
         $room = $reservation->room;
 
         // Confirmed status already set in updateReservationData
-        DB::transaction(function () use ($reservation, $user, $room) {
+        DB::transaction(function () use ($reservation, $user) {
             // Update reservation status
             $reservation->update([
                 'confirmed_at' => now(),
@@ -194,7 +194,7 @@ class ReservationService
             if ($room->usesWebdav() && $reservation->invoice) {
                 $this->uploadInvoicePdf($reservation->invoice);
             }
-            if (!$room->disable_mailer) {
+            if (! $room->disable_mailer) {
                 $this->mail->sendConfirmation($reservation);
             }
         });
@@ -243,7 +243,7 @@ class ReservationService
                     $this->deleteInvoicePdf($reservation->invoice);
                 }
             }
-            if ($sendEmail && !$room->disable_mailer) {
+            if ($sendEmail && ! $room->disable_mailer) {
                 $this->mail->sendCancellation($reservation, $reason ?? __('No reason specified'));
             }
         });
@@ -304,7 +304,7 @@ class ReservationService
                         'price' => $eventData['price'],
                         'price_label' => $eventData['price_label'],
                     ]);
-                    if ($room->usesCaldav() && !$wasCancelled) {
+                    if ($room->usesCaldav() && ! $wasCancelled) {
                         $this->caldav->updateOrCreateEvent($event);
                     }
 
@@ -328,7 +328,7 @@ class ReservationService
                         'price_label' => $eventData['price_label'],
                     ]);
 
-                    if ($room->usesCaldav() && !$wasCancelled) {
+                    if ($room->usesCaldav() && ! $wasCancelled) {
                         $this->caldav->createEvent($event);
                     }
 
@@ -351,7 +351,7 @@ class ReservationService
             // Delete events that are no longer in the request
             foreach ($existingEvents as $existingEvent) {
                 if (! in_array($existingEvent->uid, $requestEventUids)) {
-                    if ($room->usesCaldav() && !$wasCancelled) {
+                    if ($room->usesCaldav() && ! $wasCancelled) {
                         $this->caldav->deleteEventSilent($existingEvent);
                     }
                     $existingEvent->delete();
@@ -395,19 +395,19 @@ class ReservationService
         $firstDueAt = Invoice::calculateFirstDueAt($reservation);
 
         return Invoice::updateOrCreate([
-                'reservation_id' => $reservation->id,
-            ],
+            'reservation_id' => $reservation->id,
+        ],
             [
-            'owner_id' => $owner->id,
-            'number' => Invoice::generateNumber($owner),
-            'amount' => $reservation->finalPrice(),
-            'first_issued_at' => now(),
-            'issued_at' => now(),
-            'first_due_at' => $firstDueAt,
-            'due_at' => $firstDueAt,
-            'reminder_count' => 0,
-            'cancelled_at' => null,
-            'paid_at' => null,
+                'owner_id' => $owner->id,
+                'number' => Invoice::generateNumber($owner),
+                'amount' => $reservation->finalPrice(),
+                'first_issued_at' => now(),
+                'issued_at' => now(),
+                'first_due_at' => $firstDueAt,
+                'due_at' => $firstDueAt,
+                'reminder_count' => 0,
+                'cancelled_at' => null,
+                'paid_at' => null,
             ]);
     }
 
@@ -421,9 +421,9 @@ class ReservationService
         }
 
         $path = PDFService::getPrebookFilename($reservation);
-        $pdfContents = (new PDFService())->generatePrebookingPDF($reservation);
+        $pdfContents = (new PDFService)->generatePrebookingPDF($reservation);
 
-        (new WebdavUploader())
+        (new WebdavUploader)
             ->setOwner($reservation->room->owner)
             ->uploadFileContents($pdfContents, $path);
     }
@@ -439,9 +439,9 @@ class ReservationService
         }
 
         $path = PDFService::getInvoiceFilename($invoice);
-        $pdfContents = (new PDFService())->generateInvoicePDF($reservation);
+        $pdfContents = (new PDFService)->generateInvoicePDF($reservation);
 
-        (new WebdavUploader())
+        (new WebdavUploader)
             ->setOwner($reservation->room->owner)
             ->uploadFileContents($pdfContents, $path);
     }
@@ -456,7 +456,7 @@ class ReservationService
         }
 
         $path = PDFService::getPrebookFilename($reservation);
-        (new WebdavUploader())
+        (new WebdavUploader)
             ->setOwner($reservation->room->owner)
             ->deleteSilent($path);
     }
@@ -472,7 +472,7 @@ class ReservationService
         }
 
         $path = PDFService::getInvoiceFilename($invoice);
-        (new WebdavUploader())
+        (new WebdavUploader)
             ->setOwner($reservation->room->owner)
             ->deleteSilent($path);
     }
@@ -481,7 +481,7 @@ class ReservationService
     {
         $fullPrice = 0;
         $eventsWithPrices = [];
-        $timezone = app(SettingsService::class)->timezone($room);
+        $timezone = $room->getTimezone();
 
         foreach ($eventsData as $eventData) {
             $startAt = DateHelper::fromLocalInput($eventData['start'], $timezone);
@@ -497,9 +497,9 @@ class ReservationService
             // Combine event and options pricing
             $totalPrice = $eventPricing['price'] + $optionsPricing['price'];
             $fullLabel = $optionsPricing['label']
-                ? $eventPricing['label'] . ' - ' . $optionsPricing['label']
+                ? $eventPricing['label'].' - '.$optionsPricing['label']
                 : $eventPricing['label'];
-            $fullLabel .= ' - ' . currency($totalPrice, $room->owner);
+            $fullLabel .= ' - '.currency($totalPrice, $room->owner);
 
             $fullPrice += $totalPrice;
 

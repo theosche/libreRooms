@@ -453,6 +453,7 @@ div.container-full-form {
     cursor: pointer;
     transition: background-color 0.2s;
     display: flex;
+    align-self: center;
     align-items: center;
     justify-content: center;
 }
@@ -476,17 +477,12 @@ div.container-full-form {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.event-status {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .status-label {
     padding: 0.5rem 1rem;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     font-weight: 500;
+    align-self: center;
 }
 
 .status-unset {
@@ -503,7 +499,7 @@ div.container-full-form {
     color: #991b1b;
 }
 
-.status-past, .status-too-close, .status-too-far, .status-invalid, .status-overlap {
+.status-past, .status-too-close, .status-too-far, .status-invalid, .status-overlap, .status-non-bookable {
     background: #fee2e2;
     color: #991b1b;
 }

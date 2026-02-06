@@ -4,9 +4,9 @@ namespace App\Validation;
 
 use Illuminate\Validation\Rule;
 
-class RoomOptionRules
+class RoomUnavailabilityRules
 {
-    public static function rules($optionId = null): array
+    public static function rules(): array
     {
         $user = auth()->user();
 
@@ -25,18 +25,9 @@ class RoomOptionRules
                 'integer',
                 $roomRule,
             ],
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'description' => ['nullable', 'string'],
-            'price' => [
-                'required',
-                'numeric',
-                'min:0',
-            ],
-            'active' => ['boolean'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after:start'],
         ];
     }
 }

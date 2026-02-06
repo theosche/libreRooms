@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CalendarViewModes;
 use App\Enums\OwnerUserRoles;
 use App\Enums\ReservationStatus;
+use App\Enums\RoomCurrentStatus;
 use App\Models\Image;
 use App\Models\Owner;
+use App\Models\ReservationEvent;
 use App\Models\Room;
 use App\Models\SystemSettings;
 use App\Validation\RoomRules;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -190,6 +194,296 @@ class RoomController extends Controller
         $canReserve = $room->active && $room->isAccessibleBy($user);
 
         return view('rooms.show', compact('room', 'user', 'isAdmin', 'canReserve'));
+    }
+
+    /**
+     * Display the current availability status of the room.
+     */
+    public function available(Room $room): View
+    {
+        // Check access
+        if (! $room->isAccessibleBy(auth()->user())) {
+            abort(403);
+        }
+
+        $room->load(['owner.contact', 'unavailabilities']);
+        $timezone = $room->getTimezone();
+        $nowUtc = now('UTC');
+        $nowLocal = $nowUtc->copy()->setTimezone($timezone);
+
+        // Determine current status
+        $status = RoomCurrentStatus::FREE;
+        $currentEvent = null;
+        $currentUnavailability = null;
+        $freeUntil = null;
+        $freeFrom = null;
+
+        // 1. Check if currently occupied by a reservation (compare in UTC)
+        $currentEvent = ReservationEvent::with(['reservation.tenant'])
+            ->whereHas('reservation', function ($q) use ($room) {
+                $q->where('room_id', $room->id)
+                    ->where('status', ReservationStatus::CONFIRMED);
+            })
+            ->where('start', '<=', $nowUtc)
+            ->where('end', '>', $nowUtc)
+            ->first();
+
+        if ($currentEvent) {
+            $status = RoomCurrentStatus::OCCUPIED;
+            // Find when room will be free again (next gap or end of current event)
+            $freeFrom = $this->findNextFreeTime($room, $currentEvent->end, $timezone);
+        }
+
+        // 2. Check if currently in an unavailability period (compare in UTC)
+        if ($status === RoomCurrentStatus::FREE) {
+            $currentUnavailability = $room->unavailabilities
+                ->first(fn ($u) => $u->start <= $nowUtc && $u->end > $nowUtc);
+
+            if ($currentUnavailability) {
+                $status = RoomCurrentStatus::UNAVAILABLE;
+                $freeFrom = $this->findNextFreeTime($room, $currentUnavailability->end, $timezone);
+            }
+        }
+
+        // 3. Check if outside bookable hours (compare in room timezone)
+        if ($status === RoomCurrentStatus::FREE) {
+            if ($this->isOutsideBookableHours($room, $nowLocal)) {
+                $status = RoomCurrentStatus::OUTSIDE_HOURS;
+                $freeFrom = $this->findNextBookableTime($room, $nowLocal);
+            }
+        }
+
+        // 4. If free, find until when
+        if ($status === RoomCurrentStatus::FREE) {
+            $freeUntil = $this->findFreeUntil($room, $nowUtc, $timezone);
+        }
+
+        // Prepare event info based on calendar_view_mode
+        $eventInfo = null;
+        if ($currentEvent && $room->calendar_view_mode !== CalendarViewModes::SLOT) {
+            $eventInfo = [
+                'title' => $currentEvent->reservation->title,
+                'start' => $currentEvent->startLocalTz(),
+                'end' => $currentEvent->endLocalTz(),
+            ];
+            if ($room->calendar_view_mode === CalendarViewModes::FULL) {
+                $eventInfo['tenant'] = $currentEvent->reservation->tenant->display_name();
+                $eventInfo['description'] = $currentEvent->reservation->description;
+            }
+        }
+
+        // Prepare bookable hours info
+        $bookableHoursInfo = $this->getBookableHoursInfo($room);
+
+        // Convert freeFrom/freeUntil to local timezone for display
+        $freeFromLocal = $freeFrom?->copy()->setTimezone($timezone);
+        $freeUntilLocal = $freeUntil?->copy()->setTimezone($timezone);
+
+        return view('rooms.available', [
+            'room' => $room,
+            'status' => $status,
+            'currentEvent' => $currentEvent,
+            'eventInfo' => $eventInfo,
+            'currentUnavailability' => $currentUnavailability,
+            'freeUntil' => $freeUntilLocal,
+            'freeFrom' => $freeFromLocal,
+            'bookableHoursInfo' => $bookableHoursInfo,
+            'now' => $nowLocal,
+        ]);
+    }
+
+    /**
+     * Check if the given time is outside the room's bookable hours.
+     * IMPORTANT: $time must be in the room's timezone since bookable hours are defined in room TZ.
+     */
+    private function isOutsideBookableHours(Room $room, Carbon $timeInRoomTz): bool
+    {
+        // Check weekday
+        if ($room->allowed_weekdays) {
+            $dayOfWeek = $timeInRoomTz->dayOfWeekIso; // 1=Mon, 7=Sun
+            if (! in_array($dayOfWeek, $room->allowed_weekdays)) {
+                return true;
+            }
+        }
+
+        // Check time range
+        $currentTime = $timeInRoomTz->format('H:i');
+        if ($room->day_start_time && $currentTime < substr($room->day_start_time, 0, 5)) {
+            return true;
+        }
+        if ($room->day_end_time && $currentTime >= substr($room->day_end_time, 0, 5)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Find the next time the room becomes bookable.
+     * Works in room timezone and returns UTC.
+     */
+    private function findNextBookableTime(Room $room, Carbon $fromInRoomTz): ?Carbon
+    {
+        $current = $fromInRoomTz->copy();
+        $maxDays = 14; // Look up to 2 weeks ahead
+
+        for ($i = 0; $i < $maxDays; $i++) {
+            // Check if this day is allowed
+            if ($room->allowed_weekdays && ! in_array($current->dayOfWeekIso, $room->allowed_weekdays)) {
+                $current->addDay()->startOfDay();
+
+                continue;
+            }
+
+            // If we're on an allowed day, find the start time
+            $startTime = $room->day_start_time ? substr($room->day_start_time, 0, 5) : '00:00';
+            $dayStart = $current->copy()->setTimeFromTimeString($startTime);
+
+            // If the start time is in the future, return it (converted to UTC)
+            if ($dayStart > $fromInRoomTz) {
+                return $dayStart->copy()->utc();
+            }
+
+            // Otherwise, try next day
+            $current->addDay()->startOfDay();
+        }
+
+        return null;
+    }
+
+    /**
+     * Find the next free time after a given point.
+     * All comparisons with DB data are in UTC. Returns UTC.
+     */
+    private function findNextFreeTime(Room $room, Carbon $fromUtc, string $timezone): Carbon
+    {
+        $current = $fromUtc->copy();
+
+        // Check for consecutive events or unavailabilities
+        for ($i = 0; $i < 100; $i++) { // Safety limit
+            // Check for event at this time (DB is UTC)
+            $nextEvent = ReservationEvent::whereHas('reservation', function ($q) use ($room) {
+                $q->where('room_id', $room->id)
+                    ->where('status', ReservationStatus::CONFIRMED);
+            })
+                ->where('start', '<=', $current)
+                ->where('end', '>', $current)
+                ->first();
+
+            if ($nextEvent) {
+                $current = $nextEvent->end->copy();
+
+                continue;
+            }
+
+            // Check for unavailability at this time (DB is UTC)
+            $nextUnavail = $room->unavailabilities
+                ->first(fn ($u) => $u->start <= $current && $u->end > $current);
+
+            if ($nextUnavail) {
+                $current = $nextUnavail->end->copy();
+
+                continue;
+            }
+
+            // Check if outside bookable hours (convert to room TZ for this check)
+            $currentInRoomTz = $current->copy()->setTimezone($timezone);
+            if ($this->isOutsideBookableHours($room, $currentInRoomTz)) {
+                $nextBookable = $this->findNextBookableTime($room, $currentInRoomTz);
+                if ($nextBookable) {
+                    $current = $nextBookable; // Already in UTC from findNextBookableTime
+
+                    continue;
+                }
+            }
+
+            // Found a free time
+            break;
+        }
+
+        return $current;
+    }
+
+    /**
+     * Find until when the room is free.
+     * All comparisons with DB data are in UTC. Returns UTC.
+     */
+    private function findFreeUntil(Room $room, Carbon $fromUtc, string $timezone): ?Carbon
+    {
+        $limits = [];
+
+        // Next event (DB is UTC)
+        $nextEvent = ReservationEvent::whereHas('reservation', function ($q) use ($room) {
+            $q->where('room_id', $room->id)
+                ->where('status', ReservationStatus::CONFIRMED);
+        })
+            ->where('start', '>', $fromUtc)
+            ->orderBy('start')
+            ->first();
+
+        if ($nextEvent) {
+            $limits[] = $nextEvent->start;
+        }
+
+        // Next unavailability (DB is UTC)
+        $nextUnavail = $room->unavailabilities
+            ->filter(fn ($u) => $u->start > $fromUtc)
+            ->sortBy('start')
+            ->first();
+
+        if ($nextUnavail) {
+            $limits[] = $nextUnavail->start;
+        }
+
+        // End of bookable hours today (room TZ, convert to UTC)
+        if ($room->day_end_time) {
+            $fromInRoomTz = $fromUtc->copy()->setTimezone($timezone);
+            $endToday = $fromInRoomTz->copy()->setTimeFromTimeString(substr($room->day_end_time, 0, 5));
+            if ($endToday > $fromInRoomTz) {
+                $limits[] = $endToday->copy()->utc();
+            }
+        }
+
+        return empty($limits) ? null : min($limits);
+    }
+
+    /**
+     * Get human-readable bookable hours info.
+     */
+    private function getBookableHoursInfo(Room $room): array
+    {
+        $info = [];
+
+        if ($room->allowed_weekdays) {
+            $days = array_map(fn ($d) => $this->dayName($d), $room->allowed_weekdays);
+            $info['days'] = $days;
+        }
+
+        if ($room->day_start_time || $room->day_end_time) {
+            $info['hours'] = [
+                'start' => $room->day_start_time ? substr($room->day_start_time, 0, 5) : '00:00',
+                'end' => $room->day_end_time ? substr($room->day_end_time, 0, 5) : '24:00',
+            ];
+        }
+
+        return $info;
+    }
+
+    /**
+     * Get day name from ISO day number.
+     */
+    private function dayName(int $day): string
+    {
+        return match ($day) {
+            1 => __('Monday'),
+            2 => __('Tuesday'),
+            3 => __('Wednesday'),
+            4 => __('Thursday'),
+            5 => __('Friday'),
+            6 => __('Saturday'),
+            7 => __('Sunday'),
+            default => '',
+        };
     }
 
     /**

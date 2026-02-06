@@ -14,6 +14,7 @@ const Status = Object.freeze({
     TOO_FAR: "too-far",
     INVALID: "invalid",
     OVERLAP: "overlap",
+    NON_BOOKABLE: "non-bookable",
     label(type) {
         switch (type) {
             case this.UNSET:
@@ -32,6 +33,8 @@ const Status = Object.freeze({
                 return t.invalid || 'Invalid';
             case this.OVERLAP:
                 return t.overlap || 'Overlap';
+            case this.NON_BOOKABLE:
+                return t.non_bookable || 'Non-bookable';
             default:
                 return null;
         }
@@ -146,6 +149,8 @@ function updateAvailability(ev) {
         ev.status = Status.TOO_FAR;
     } else if (hasOverlapWithOtherEvents(ev)) {
         ev.status = Status.OVERLAP;
+    } else if (!window.IsAdmin && isNonBookable(ev)) {
+        ev.status = Status.NON_BOOKABLE;
     } else {
         ev.status = checkAvailability(ev.start,ev.end,ev.uid) ? Status.FREE : Status.BUSY;
     }
@@ -178,6 +183,50 @@ function hasOverlapWithOtherEvents(currentEv) {
         return currentEv.start < otherEv.end && currentEv.end > otherEv.start;
     });
 }
+
+function isNonBookable(ev) {
+    const settings = window.RoomConfig.settings;
+
+    // Check if event spans multiple days
+    const isMultiDay = !ev.start.hasSame(ev.end, 'day');
+
+    // Time range check - multi-day events are not allowed if time restrictions exist
+    if ((settings.day_start_time || settings.day_end_time) && isMultiDay) {
+        return true;
+    }
+
+    // Time range check for single-day events
+    if (settings.day_start_time) {
+        const startTime = ev.start.toFormat('HH:mm');
+        if (startTime < settings.day_start_time) return true;
+    }
+    if (settings.day_end_time) {
+        const endTime = ev.end.toFormat('HH:mm');
+        if (endTime > settings.day_end_time) return true;
+    }
+
+    // Weekday check - check ALL days between start and end
+    if (settings.allowed_weekdays) {
+        let current = ev.start.startOf('day');
+        const endDay = ev.end.startOf('day');
+
+        while (current <= endDay) {
+            const day = String(current.weekday); // Luxon: 1=Mon, 7=Sun
+            if (!settings.allowed_weekdays.includes(day)) return true;
+            current = current.plus({ days: 1 });
+        }
+    }
+
+    // Unavailability check
+    const unavailabilities = window.RoomConfig.unavailabilities || [];
+    for (const u of unavailabilities) {
+        const uStart = roomTzDate(u.start);
+        const uEnd = roomTzDate(u.end);
+        if (ev.start < uEnd && ev.end > uStart) return true;
+    }
+
+    return false;
+}
 async function initAvailabilityCheck() {
     try {
         const response = await fetch(window.RoomConfig.settings.availability_route);
@@ -185,8 +234,9 @@ async function initAvailabilityCheck() {
 
         // Store full calendar events data globally for calendar display
         window.calendarEventsData = data;
-
-        eventsSlots = data.map(slot => ({
+        // Handle both old format (array) and new format (object with events property)
+        const eventsData = data.events || data;
+        eventsSlots = eventsData.map(slot => ({
             start: roomTzDate(slot.start),
             end: roomTzDate(slot.end),
             uid: slot.uid
@@ -321,7 +371,12 @@ function getOptionsPrice(options) {
 }
 
 function updateCost(ev) {
-    if (ev.status !== Status.FREE) {
+    // Allow cost calculation for FREE status, or for soft statuses when admin
+    const softStatuses = [Status.PAST, Status.TOO_CLOSE, Status.TOO_FAR, Status.NON_BOOKABLE];
+    const canCalculateCost = ev.status === Status.FREE ||
+        (window.IsAdmin && softStatuses.includes(ev.status));
+
+    if (!canCalculateCost) {
         ev.price = 0;
         ev.eventRow.querySelector(".event-info-text").textContent = "";
         return;
@@ -547,12 +602,19 @@ function validateEventsBeforeSubmit(event) {
         return false;
     }
 
-    const invalidEvents = window.ResEvents.filter(ev => ev.status !== Status.FREE);
-    if (invalidEvents.length > 0) {
+    // Hard blocking statuses - always block submission
+    const blockingStatuses = [Status.UNSET, Status.INVALID, Status.BUSY, Status.OVERLAP];
+    // Soft statuses - only block for non-admins
+    const softStatuses = [Status.PAST, Status.TOO_CLOSE, Status.TOO_FAR, Status.NON_BOOKABLE];
+
+    const hardInvalid = window.ResEvents.filter(ev => blockingStatuses.includes(ev.status));
+    const softInvalid = window.ResEvents.filter(ev => softStatuses.includes(ev.status));
+
+    if (hardInvalid.length > 0) {
         event.preventDefault();
 
         let errorMessage = (t.error_invalid_dates || 'Error: Some reservation dates are not valid:') + '\n\n';
-        invalidEvents.forEach(ev => {
+        hardInvalid.forEach(ev => {
             const statusLabel = Status.label(ev.status);
             errorMessage += `- ${statusLabel}\n`;
         });
@@ -561,6 +623,21 @@ function validateEventsBeforeSubmit(event) {
         alert(errorMessage);
         return false;
     }
+
+    if (!window.IsAdmin && softInvalid.length > 0) {
+        event.preventDefault();
+
+        let errorMessage = (t.error_invalid_dates || 'Error: Some reservation dates are not valid:') + '\n\n';
+        softInvalid.forEach(ev => {
+            const statusLabel = Status.label(ev.status);
+            errorMessage += `- ${statusLabel}\n`;
+        });
+        errorMessage += '\n' + (t.error_fix_dates || 'Please fix these dates before submitting the form.');
+
+        alert(errorMessage);
+        return false;
+    }
+
     return true;
 }
 

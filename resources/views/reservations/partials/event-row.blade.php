@@ -1,16 +1,14 @@
 <div class="form-element event-row" data-event-id="{{ $event['id'] }}">
     <div class="form-element-row event-row-date">
         {{-- Remove --}}
-        <div class="form-field">
-            <button
-                type="button"
-                class="event-remove"
-                id="event-remove-{{ $event['id'] }}"
-                aria-label="{{ __('Remove this date') }}"
-            >
-                ✕
-            </button>
-        </div>
+        <button
+            type="button"
+            class="event-remove"
+            id="event-remove-{{ $event['id'] }}"
+            aria-label="{{ __('Remove this date') }}"
+        >
+            ✕
+        </button>
 
         {{-- Start datetime --}}
         <div class="form-field">
@@ -35,9 +33,7 @@
         </div>
 
         {{-- Availability status --}}
-        <div class="form-field event-status">
-            <span class="status-label" id="event-status-{{ $event['id'] }}"></span>
-        </div>
+        <span class="status-label" id="event-status-{{ $event['id'] }}"></span>
 
         <input
             type="hidden"

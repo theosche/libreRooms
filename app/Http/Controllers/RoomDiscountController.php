@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RoomDiscount;
 use App\Models\Owner;
 use App\Models\Room;
+use App\Models\RoomDiscount;
 use App\Validation\RoomDiscountRules;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class RoomDiscountController extends Controller
@@ -19,10 +19,7 @@ class RoomDiscountController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user has admin rights for at least one owner
-        $canViewMine = $user && ($user->is_global_admin || $user->owners()->wherePivot('role', 'admin')->exists());
-
-        if (!$canViewMine) {
+        if (! $user?->canAdminAnyOwner()) {
             abort(403, __('You must be an administrator of at least one owner to access this page.'));
         }
 
@@ -56,8 +53,6 @@ class RoomDiscountController extends Controller
         return view('room-discounts.index', [
             'discounts' => $discounts,
             'rooms' => $rooms,
-            'user' => $user,
-            'canViewMine' => $canViewMine,
         ]);
     }
 
@@ -67,9 +62,8 @@ class RoomDiscountController extends Controller
     public function create(): View
     {
         $user = auth()->user();
-
         // Check if user has admin rights for at least one owner
-        if (!$user->is_global_admin && !$user->owners()->wherePivot('role', 'admin')->exists()) {
+        if (! $user?->canAdminAnyOwner()) {
             abort(403, __('You must be an administrator of at least one owner to create a discount.'));
         }
 
@@ -92,20 +86,11 @@ class RoomDiscountController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $user = auth()->user();
-
         // Validate
         $validated = $request->validate(RoomDiscountRules::rules());
 
-        // Check if user has admin rights for the selected room's owner
-        $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (!$user->is_global_admin && !$user->isAdminOf($room->owner)) {
-            return redirect()->route('room-discounts.index')
-                ->with('error', __('You do not have administration rights for this owner.'));
-        }
-
         // Create discount
-        $discount = RoomDiscount::create($validated);
+        RoomDiscount::create($validated);
 
         return redirect()->route('room-discounts.index')
             ->with('success', __('Discount created successfully.'));
@@ -119,7 +104,7 @@ class RoomDiscountController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for this discount's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($roomDiscount->room->owner)) {
+        if (! $user->isAdminOf($roomDiscount->room->owner)) {
             abort(403, __('You do not have administration rights for this discount.'));
         }
 
@@ -144,18 +129,12 @@ class RoomDiscountController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user has admin rights for this discount's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($roomDiscount->room->owner)) {
-            return redirect()->route('room-discounts.index')
-                ->with('error', __('You do not have administration rights for this discount.'));
-        }
-
         // Validate
         $validated = $request->validate(RoomDiscountRules::rules($roomDiscount->id));
 
         // Check if user has admin rights for the selected room's owner (in case it changed)
         $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (!$user->is_global_admin && !$user->isAdminOf($room->owner)) {
+        if (! $user->is_global_admin && ! $user->isAdminOf($room->owner)) {
             return redirect()->route('room-discounts.index')
                 ->with('error', __('You do not have administration rights for the new owner.'));
         }
@@ -175,7 +154,7 @@ class RoomDiscountController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for this discount's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($roomDiscount->room->owner)) {
+        if (! $user->isAdminOf($roomDiscount->room->owner)) {
             return redirect()->route('room-discounts.index')
                 ->with('error', __('You do not have administration rights for this discount.'));
         }

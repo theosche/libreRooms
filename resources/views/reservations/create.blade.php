@@ -20,6 +20,7 @@
             too_far: @json(__('Too far')),
             invalid: @json(__('Invalid')),
             overlap: @json(__('Overlap')),
+            non_bookable: @json(__('Non-bookable')),
             short_booking: @json(__('short booking')),
             full_day_booking: @json(__('full day booking')),
             to: @json(__('to')),
@@ -27,6 +28,7 @@
             error_invalid_dates: @json(__('Error: Some reservation dates are not valid:')),
             error_fix_dates: @json(__('Please fix these dates before submitting the form.')),
         };
+        window.IsAdmin = @json($isAdmin);
         window.RoomConfig = @json($roomConfig);
         window.EnabledDiscounts = @json($enabledDiscounts);
         window.ResEvents = @json($events);
@@ -109,6 +111,9 @@
             'availableOptions' => $room->options->where('active',true),
             'events' => $events,
             'owner' => $room->owner,
+            'allowed_weekdays' => $room->allowed_weekdays,
+            'day_start_time' => $room->day_start_time,
+            'day_end_time' => $room->day_end_time,
             ])
 
         {{-- 6. Donation --}}

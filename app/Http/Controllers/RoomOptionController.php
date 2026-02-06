@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\RoomOption;
 use App\Models\Owner;
 use App\Models\Room;
+use App\Models\RoomOption;
 use App\Validation\RoomOptionRules;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class RoomOptionController extends Controller
@@ -19,10 +19,7 @@ class RoomOptionController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user has admin rights for at least one owner
-        $canViewMine = $user && ($user->is_global_admin || $user->owners()->wherePivot('role', 'admin')->exists());
-
-        if (!$canViewMine) {
+        if (! $user?->canAdminAnyOwner()) {
             abort(403, __('You must be an administrator of at least one owner to access this page.'));
         }
 
@@ -56,8 +53,6 @@ class RoomOptionController extends Controller
         return view('room-options.index', [
             'options' => $options,
             'rooms' => $rooms,
-            'user' => $user,
-            'canViewMine' => $canViewMine,
         ]);
     }
 
@@ -69,7 +64,7 @@ class RoomOptionController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for at least one owner
-        if (!$user->is_global_admin && !$user->owners()->wherePivot('role', 'admin')->exists()) {
+        if (! $user?->canAdminAnyOwner()) {
             abort(403, __('You must be an administrator of at least one owner to create an option.'));
         }
 
@@ -92,20 +87,10 @@ class RoomOptionController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $user = auth()->user();
-
-        // Validate
+        // Validate (incl. permission check)
         $validated = $request->validate(RoomOptionRules::rules());
 
-        // Check if user has admin rights for the selected room's owner
-        $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (!$user->is_global_admin && !$user->isAdminOf($room->owner)) {
-            return redirect()->route('room-options.index')
-                ->with('error', __('You do not have administration rights for this owner.'));
-        }
-
-        // Create option
-        $option = RoomOption::create($validated);
+        RoomOption::create($validated);
 
         return redirect()->route('room-options.index')
             ->with('success', __('Option created successfully.'));
@@ -119,7 +104,7 @@ class RoomOptionController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for this option's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($roomOption->room->owner)) {
+        if (! $user->isAdminOf($roomOption->room->owner)) {
             abort(403, __('You do not have administration rights for this option.'));
         }
 
@@ -144,18 +129,12 @@ class RoomOptionController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user has admin rights for this option's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($roomOption->room->owner)) {
-            return redirect()->route('room-options.index')
-                ->with('error', __('You do not have administration rights for this option.'));
-        }
-
         // Validate
         $validated = $request->validate(RoomOptionRules::rules($roomOption->id));
 
         // Check if user has admin rights for the selected room's owner (in case it changed)
         $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (!$user->is_global_admin && !$user->isAdminOf($room->owner)) {
+        if (! $user->is_global_admin && ! $user->isAdminOf($room->owner)) {
             return redirect()->route('room-options.index')
                 ->with('error', __('You do not have administration rights for the new owner.'));
         }
@@ -175,7 +154,7 @@ class RoomOptionController extends Controller
         $user = auth()->user();
 
         // Check if user has admin rights for this option's room's owner
-        if (!$user->is_global_admin && !$user->isAdminOf($roomOption->room->owner)) {
+        if (! $user->isAdminOf($roomOption->room->owner)) {
             return redirect()->route('room-options.index')
                 ->with('error', __('You do not have administration rights for this option.'));
         }

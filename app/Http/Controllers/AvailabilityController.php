@@ -1,9 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use App\Enums\CalendarViewModes;
 use App\Models\Room;
 use App\Services\Availability\AvailabilityService;
-use App\Enums\CalendarViewModes;
 
 class AvailabilityController
 {
@@ -32,17 +33,17 @@ class AvailabilityController
                 case 'full':
                     $event['title'] = $slot['title'] ?? __('Untitled');
                     $descriptionParts = [
-                        '<strong>' . ($slot['title'] ?? __('Untitled')) . '</strong>',
-                        __('Start') . ': ' . $slot['start']->format('d.m.Y H:i'),
-                        __('End') . ': ' . $slot['end']->format('d.m.Y H:i'),
+                        '<strong>'.($slot['title'] ?? __('Untitled')).'</strong>',
+                        __('Start').': '.$slot['start']->format('d.m.Y H:i'),
+                        __('End').': '.$slot['end']->format('d.m.Y H:i'),
                     ];
 
-                    if (!empty($slot['description'])) {
-                        $descriptionParts[] = __('Description') . ': ' . $slot['description'];
+                    if (! empty($slot['description'])) {
+                        $descriptionParts[] = __('Description').': '.$slot['description'];
                     }
 
-                    if (!empty($slot['tenant'])) {
-                        $descriptionParts[] = __('Contact') . ': ' . $slot['tenant'];
+                    if (! empty($slot['tenant'])) {
+                        $descriptionParts[] = __('Contact').': '.$slot['tenant'];
                     }
 
                     $event['extendedProps'] = [
@@ -54,9 +55,9 @@ class AvailabilityController
                     $event['title'] = $slot['title'] ?? __('Untitled');
                     $event['extendedProps'] = [
                         'description' => implode("\n", [
-                            '<strong>' . ($slot['title'] ?? __('Untitled')) . '</strong>',
-                            __('Start') . ': ' . $slot['start']->format('d.m.Y H:i'),
-                            __('End') . ': ' . $slot['end']->format('d.m.Y H:i'),
+                            '<strong>'.($slot['title'] ?? __('Untitled')).'</strong>',
+                            __('Start').': '.$slot['start']->format('d.m.Y H:i'),
+                            __('End').': '.$slot['end']->format('d.m.Y H:i'),
                         ]),
                     ];
                     break;
@@ -66,9 +67,9 @@ class AvailabilityController
                     $event['title'] = __('Occupied');
                     $event['extendedProps'] = [
                         'description' => implode("\n", [
-                            "<strong>" . __('Occupied') . "</strong>",
-                            __('Start') . ': ' . $slot['start']->format('d.m.Y H:i'),
-                            __('End') . ': ' . $slot['end']->format('d.m.Y H:i'),
+                            '<strong>'.__('Occupied').'</strong>',
+                            __('Start').': '.$slot['start']->format('d.m.Y H:i'),
+                            __('End').': '.$slot['end']->format('d.m.Y H:i'),
                         ]),
                     ];
                     break;
@@ -77,6 +78,49 @@ class AvailabilityController
             return $event;
         }, $busySlots);
 
-        return response()->json($events);
+        $unavailabilities = $room->unavailabilities->map(function ($u) {
+            $start = $u->startLocalTz();
+            $end = $u->endLocalTz();
+            $event = [
+                'start' => $start->format('Y-m-d\TH:i'),
+                'end' => $end->format('Y-m-d\TH:i'),
+                'title' => $u->title ?? __('Unavailable'),
+                'color' => '#fea2a2',
+            ];
+            $event['extendedProps'] = [
+                'description' => implode("\n", [
+                    '<strong>'.$event['title'].'</strong>',
+                    __('Start').': '.$start->format('d.m.Y H:i'),
+                    __('End').': '.$end->format('d.m.Y H:i'),
+                ]),
+            ];
+
+            return $event;
+        });
+
+        return response()->json([
+            'events' => $events,
+            'unavailabilities' => $unavailabilities,
+            'businessHours' => $this->buildBusinessHours($room),
+        ]);
+    }
+
+    /**
+     * Build the businessHours configuration for FullCalendar.
+     */
+    private function buildBusinessHours(Room $room): array|bool
+    {
+        if (! $room->allowed_weekdays && ! $room->day_start_time && ! $room->day_end_time) {
+            return false; // No restrictions = no businessHours
+        }
+
+        return [
+            // Convert ISO weekday (1-7, Mon-Sun) to FullCalendar format (0-6, Sun-Sat)
+            'daysOfWeek' => $room->allowed_weekdays
+                ? array_map(fn ($d) => $d % 7, $room->allowed_weekdays) // 1→1, 2→2, ..., 7→0
+                : [0, 1, 2, 3, 4, 5, 6],
+            'startTime' => $room->day_start_time ? substr($room->day_start_time, 0, 5) : '00:00',
+            'endTime' => $room->day_end_time ? substr($room->day_end_time, 0, 5) : '24:00',
+        ];
     }
 }

@@ -34,10 +34,18 @@ class ReservationController extends Controller
                 'allow_late_end_hour' => $room->allow_late_end_hour,
                 'reservation_cutoff_days' => $room->reservation_cutoff_days,
                 'reservation_advance_limit' => $room->reservation_advance_limit,
-                'timezone' => $timezone,
+                'allowed_weekdays' => $room->allowed_weekdays,
+                'day_start_time' => $room->day_start_time ? substr($room->day_start_time, 0, 5) : null,
+                'day_end_time' => $room->day_end_time ? substr($room->day_end_time, 0, 5) : null,
+                'timeZone' => $timezone,
                 'currency' => $room->owner->getCurrency(),
-                'locale' => str_replace('_','-', $room->owner->getLocale())
+                'locale' => str_replace('_', '-', $room->owner->getLocale()),
             ],
+            'unavailabilities' => $room->unavailabilities->map(fn ($u) => [
+                'start' => $u->start->setTimezone($timezone)->format('Y-m-d\TH:i'),
+                'end' => $u->end->setTimezone($timezone)->format('Y-m-d\TH:i'),
+                'title' => $u->title,
+            ])->values(),
             'options' => $room->options->where('active', true)->map(fn ($o) => [
                 'id' => $o->id,
                 'name' => $o->name,
@@ -76,8 +84,8 @@ class ReservationController extends Controller
             $events = [];
             foreach ($sortedEvents as $index => $reservationEvent) {
                 $events[$index] = [
-                    'start' => $reservationEvent->start->setTimezone($timezone)->format('Y-m-d\TH:i'),
-                    'end' => $reservationEvent->end->setTimezone($timezone)->format('Y-m-d\TH:i'),
+                    'start' => $reservationEvent->startLocalTz()->format('Y-m-d\TH:i'),
+                    'end' => $reservationEvent->endLocalTz()->format('Y-m-d\TH:i'),
                     'uid' => $reservationEvent->uid,
                     'options' => $reservationEvent->options->pluck('id')->toArray(),
                     'id' => $index,
@@ -124,9 +132,10 @@ class ReservationController extends Controller
 
     public function edit(Reservation $reservation): View|RedirectResponse
     {
-        if (!$reservation->isEditable()) {
+        if (! $reservation->isEditable()) {
             return redirect()->route('reservations.index')->with('error', __('Reservation cannot be edited.'));
         }
+
         return $this->reservationForm($reservation->room, $reservation);
     }
 
@@ -139,10 +148,7 @@ class ReservationController extends Controller
         $view = $request->input('view', 'mine'); // 'mine' or 'admin'
 
         // Check if user can access admin view (moderator or admin role)
-        $canViewAdmin = $user->is_global_admin ||
-            $user->owners()
-                ->wherePivotIn('role', [OwnerUserRoles::ADMIN->value, OwnerUserRoles::MODERATOR->value])
-                ->exists();
+        $canViewAdmin = $user->canManageAnyOwner();
 
         if ($view === 'admin' && ! $canViewAdmin) {
             $view = 'mine';
@@ -167,8 +173,8 @@ class ReservationController extends Controller
                 'invoice',
                 'customFieldValues',
             ])
-            ->whereIn('room_id', $roomIds)
-            ->orderBy('created_at', 'desc');
+                ->whereIn('room_id', $roomIds)
+                ->orderBy('created_at', 'desc');
 
             // Get available rooms and contacts for filters
             $rooms = Room::whereIn('id', $roomIds)->get();
@@ -191,8 +197,8 @@ class ReservationController extends Controller
                 'invoice',
                 'customFieldValues',
             ])
-            ->whereIn('tenant_id', $contactIds)
-            ->orderBy('created_at', 'desc');
+                ->whereIn('tenant_id', $contactIds)
+                ->orderBy('created_at', 'desc');
 
             // Get available rooms and contacts for filters
             $rooms = Room::whereHas('reservations', function ($q) use ($contactIds) {
@@ -243,7 +249,6 @@ class ReservationController extends Controller
             __('New reservation created successfully - pending confirmation.') :
             __('New reservation confirmed successfully.');
 
-
         if (auth()->check()) {
             return redirect()->route('reservations.index')->with('success', $msg);
         } else {
@@ -253,7 +258,7 @@ class ReservationController extends Controller
 
     public function update(UpdateReservationRequest $request, Reservation $reservation, ReservationService $service): RedirectResponse
     {
-        if (!$reservation->isEditable()) {
+        if (! $reservation->isEditable()) {
             return redirect()->route('reservations.index')->with('error', __('Reservation cannot be edited.'));
         }
 
@@ -307,6 +312,7 @@ class ReservationController extends Controller
         if ($reservation->isPaid()) {
             return redirect()->route('reservations.index')->with('success', __('Reservation cancelled. Warning - invoice already paid.'));
         }
+
         return redirect()->route('reservations.index')->with('success', __('Reservation cancelled successfully.'));
     }
 

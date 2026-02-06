@@ -125,6 +125,7 @@ Route::controller(RoomController::class)->middleware(['auth', 'verified'])->grou
 Route::controller(RoomController::class)->group(function () {
     Route::get('/rooms', 'index')->name('rooms.index');
     Route::get('/rooms/{room:slug}', 'show')->name('rooms.show');
+    Route::get('/rooms/{room:slug}/available', 'available')->name('rooms.available');
 });
 
 Route::controller(RoomUserController::class)->middleware(['auth', 'verified'])->group(function () {
@@ -229,6 +230,15 @@ Route::controller(\App\Http\Controllers\CustomFieldController::class)->middlewar
     Route::get('/custom-fields/{customField}/edit', 'edit')->name('custom-fields.edit');
     Route::put('/custom-fields/{customField}', 'update')->name('custom-fields.update');
     Route::delete('/custom-fields/{customField}', 'destroy')->name('custom-fields.destroy');
+});
+
+Route::controller(\App\Http\Controllers\RoomUnavailabilityController::class)->middleware(['auth', 'verified'])->group(function () {
+    Route::get('/room-unavailabilities', 'index')->name('room-unavailabilities.index');
+    Route::get('/room-unavailabilities/create', 'create')->name('room-unavailabilities.create');
+    Route::post('/room-unavailabilities', 'store')->name('room-unavailabilities.store');
+    Route::get('/room-unavailabilities/{roomUnavailability}/edit', 'edit')->name('room-unavailabilities.edit');
+    Route::put('/room-unavailabilities/{roomUnavailability}', 'update')->name('room-unavailabilities.update');
+    Route::delete('/room-unavailabilities/{roomUnavailability}', 'destroy')->name('room-unavailabilities.destroy');
 });
 
 // Invoice management

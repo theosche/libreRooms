@@ -134,10 +134,12 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasOwnerRole($owner, OwnerUserRoles::ADMIN);
     }
+
     public function canManageOwner(Owner $owner): bool
     {
         return $this->hasOwnerRole($owner, OwnerUserRoles::MODERATOR);
     }
+
     public function canViewOwner(Owner $owner): bool
     {
         return $this->hasOwnerRole($owner, OwnerUserRoles::VIEWER);
@@ -199,9 +201,17 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        return $this->owners()
-            ->get()
+        return $this->owners
             ->contains(fn ($owner) => OwnerUserRoles::tryFrom($owner->pivot->role)?->hasAtLeast(OwnerUserRoles::MODERATOR));
+    }
+
+    public function canAdminAnyOwner(): bool
+    {
+        if ($this->is_global_admin) {
+            return true;
+        }
+
+        return $this->owners()->wherePivot('role', 'admin')->exists();
     }
 
     public function canAccessContact(Contact $contact): bool
@@ -214,4 +224,3 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->is_global_admin;
     }
 }
-

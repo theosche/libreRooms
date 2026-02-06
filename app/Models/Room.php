@@ -43,12 +43,16 @@ class Room extends Model
         'allow_late_end_hour',
         'reservation_cutoff_days',
         'reservation_advance_limit',
+        'allowed_weekdays',
+        'day_start_time',
+        'day_end_time',
         'use_special_discount',
         'use_donation',
         'charter_mode',
         'charter_str',
         'custom_message',
         'secret_message',
+        'secret_message_days_before',
         'external_slot_provider',
         'dav_calendar',
         'embed_calendar_mode',
@@ -67,10 +71,12 @@ class Room extends Model
         'use_donation' => 'boolean',
         'charter_mode' => CharterModes::class,
         'secret_message' => 'encrypted',
+        'secret_message_days_before' => 'integer',
         'embed_calendar_mode' => EmbedCalendarModes::class,
         'calendar_view_mode' => CalendarViewModes::class,
         'external_slot_provider' => ExternalSlotProviders::class,
         'disable_mailer' => 'boolean',
+        'allowed_weekdays' => 'array',
     ];
 
     public function getTimezone(): string
@@ -126,6 +132,11 @@ class Room extends Model
         return $this->hasMany(CustomField::class);
     }
 
+    public function unavailabilities(): HasMany
+    {
+        return $this->hasMany(RoomUnavailability::class);
+    }
+
     /**
      * Users with direct access to this room (via room_user pivot).
      */
@@ -168,10 +179,10 @@ class Room extends Model
         }
         $rules = ['≤ '.$this->max_hours_short.'h'];
         if ($this->always_short_before) {
-            $rules[] = __('before') . ' ' . $this->always_short_before.'h';
+            $rules[] = __('before').' '.$this->always_short_before.'h';
         }
         if ($this->always_short_after) {
-            $rules[] = __('after') . ' ' . $this->always_short_after.'h';
+            $rules[] = __('after').' '.$this->always_short_after.'h';
         }
 
         return implode(', ', $rules);
@@ -217,5 +228,20 @@ class Room extends Model
     public function hasCoordinates(): bool
     {
         return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    public function allowedWeekdayNames(): array
+    {
+        $weekdayNames = [
+            1 => __('Monday'),
+            2 => __('Tuesday'),
+            3 => __('Wednesday'),
+            4 => __('Thursday'),
+            5 => __('Friday'),
+            6 => __('Saturday'),
+            7 => __('Sunday'),
+        ];
+
+        return array_map(fn ($d) => $weekdayNames[$d] ?? '', $this->allowed_weekdays);
     }
 }

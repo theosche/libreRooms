@@ -1,5 +1,21 @@
 <div class="form-group" id="events-form-group">
     <h3 class="form-group-title">{{ __('Reservation dates and times') }} *</h3>
+    @if($allowed_weekdays)
+        <div class="form-element flex justify-between">
+            <dt class="text-gray-600">{{ __('Bookable days') }}</dt>
+            <dd class="text-gray-900 text-right">{{ implode(', ', $room->allowedWeekdayNames()) }}</dd>
+        </div>
+    @endif
+    @if($day_start_time || $day_end_time)
+        <div class="form-element flex justify-between">
+            <dt class="text-gray-600">{{ __('Bookable hours') }}</dt>
+            <dd class="text-gray-900">
+                {{ $day_start_time ? substr($day_start_time, 0, 5) : '00:00' }}
+                -
+                {{ $day_end_time ? substr($day_end_time, 0, 5) : '00:00' }}
+            </dd>
+        </div>
+    @endif
     @error('events')
         <span class="text-red-600 text-sm block mb-2">{{ $message }}</span>
     @enderror
@@ -26,16 +42,14 @@
     <div class="form-element event-row" data-event-id="__INDEX__">
         <div class="form-element-row event-row-date">
             {{-- Remove --}}
-            <div class="form-field">
-                <button
-                    type="button"
-                    class="event-remove"
-                    id="event-remove-__INDEX__"
-                    aria-label="{{ __('Remove this date') }}"
-                >
-                    ✕
-                </button>
-            </div>
+            <button
+                type="button"
+                class="event-remove"
+                id="event-remove-__INDEX__"
+                aria-label="{{ __('Remove this date') }}"
+            >
+                ✕
+            </button>
 
             {{-- Start datetime --}}
             <div class="form-field">
@@ -60,9 +74,7 @@
             </div>
 
             {{-- Availability status --}}
-            <div class="form-field event-status">
             <span class="status-label" id="event-status-__INDEX__"></span>
-            </div>
 
             <input
                 type="hidden"

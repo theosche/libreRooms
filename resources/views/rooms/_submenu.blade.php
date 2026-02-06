@@ -27,6 +27,10 @@
                class="page-submenu-item page-submenu-secondary {{ request()->routeIs('custom-fields.*') ? 'active' : '' }}">
                 {{ __('Custom fields') }}
             </a>
+            <a href="{{ route('room-unavailabilities.index') }}"
+               class="page-submenu-item page-submenu-secondary {{ request()->routeIs('room-unavailabilities.*') ? 'active' : '' }}">
+                {{ __('Unavailabilities') }}
+            </a>
 
             {{-- Separator --}}
             <span class="page-submenu-separator"></span>
@@ -47,6 +51,10 @@
             @elseif(request()->routeIs('custom-fields.*'))
                 <a href="{{ route('custom-fields.create') }}" class="page-submenu-item page-submenu-action">
                     + {{ __('Add field') }}
+                </a>
+            @elseif(request()->routeIs('room-unavailabilities.*'))
+                <a href="{{ route('room-unavailabilities.create') }}" class="page-submenu-item page-submenu-action">
+                    + {{ __('Add unavailability') }}
                 </a>
             @endif
         @endcan

@@ -4,8 +4,8 @@ namespace App\Services\Availability;
 
 use App\Enums\ReservationStatus;
 use App\Models\ReservationEvent;
-use App\Services\Caldav\CaldavClient;
 use App\Models\Room;
+use App\Services\Caldav\CaldavClient;
 use Carbon\Carbon;
 use DateTimeZone;
 use om\IcalParser;
@@ -13,39 +13,42 @@ use om\IcalParser;
 class AvailabilityService
 {
     private ?Room $room = null;
+
     private array $busySlots = [];
+
     public function __construct(
     ) {}
 
     public function loadBusySlotsCaldav(Room $room, string $timezone, ?Carbon $from, ?Carbon $to): array
     {
-        $caldav = new CaldavClient();
+        $caldav = new CaldavClient;
         $caldav->connect($room);
         $ICSevents = $caldav->getEvents($from, $to);
-        $fullIcs = "";
+        $fullIcs = '';
         foreach ($ICSevents as $ev) {
-            $fullIcs .= $ev->getData() . PHP_EOL;
+            $fullIcs .= $ev->getData().PHP_EOL;
         }
         if (empty($fullIcs)) {
             return [];
         }
-        $parser = new IcalParser();
+        $parser = new IcalParser;
         $parser->parseString($fullIcs);
         $busySlots = array_map(function ($e) use ($timezone) {
-                return [
-                    'start' => Carbon::instance($e['DTSTART'])->setTimezone(new DateTimeZone($timezone)),
-                    'end' => Carbon::instance($e['DTEND'])->setTimezone(new DateTimeZone($timezone)),
-                    'uid' => $e['UID'],
-                    'title' => $e['SUMMARY'] ?? null,
-                    'description' => $e['DESCRIPTION'] ?? null,
-                ];
-            },
+            return [
+                'start' => Carbon::instance($e['DTSTART'])->setTimezone(new DateTimeZone($timezone)),
+                'end' => Carbon::instance($e['DTEND'])->setTimezone(new DateTimeZone($timezone)),
+                'uid' => $e['UID'],
+                'title' => $e['SUMMARY'] ?? null,
+                'description' => $e['DESCRIPTION'] ?? null,
+            ];
+        },
             (array) ($parser->getEvents())
         );
-        return($busySlots);
+
+        return $busySlots;
     }
 
-    function loadBusySlotsLocal(Room $room, string $timezone, ?Carbon $from, ?Carbon $to): array
+    public function loadBusySlotsLocal(Room $room, string $timezone, ?Carbon $from, ?Carbon $to): array
     {
         // Always load all relations to return complete information
         $query = ReservationEvent::with(['reservation.tenant'])
@@ -76,22 +79,25 @@ class AvailabilityService
         })->toArray();
     }
 
-    function loadBusySlots(Room $room, string $timezone="UTC", ?Carbon $from=null, ?Carbon $to=null): array
+    public function loadBusySlots(Room $room, string $timezone = 'UTC', ?Carbon $from = null, ?Carbon $to = null): array
     {
-        $from = $from ?? now()->utc();
-        $to   = $to ?? ($room->reservation_advance_limit ? now()->addDays($room->reservation_advance_limit)->utc() : null);
+        // send events starting from 3 months ago
+        $from = $from ?? now()->subMonths(3)->utc();
         $this->room = $room;
 
         if ($room->usesCaldav()) {
             $this->busySlots = $this->loadBusySlotsCaldav($room, $timezone, $from, $to);
+
             return $this->busySlots;
         } else {
             $this->busySlots = $this->loadBusySlotsLocal($room, $timezone, $from, $to);
+
             return $this->busySlots;
         }
     }
 
-    public function checkAvailability(Room $room, Carbon $start, Carbon $end, ?String $uid): bool {
+    public function checkAvailability(Room $room, Carbon $start, Carbon $end, ?string $uid): bool
+    {
         if ($this->room != $room) {
             $this->loadBusySlots($room);
         }
@@ -104,6 +110,7 @@ class AvailabilityService
                 return false;
             }
         }
+
         return true;
     }
 }

@@ -90,6 +90,12 @@ class RoomRules
             'reservation_cutoff_days' => ['nullable', 'integer', 'min:0'],
             'reservation_advance_limit' => ['nullable', 'integer', 'min:0'],
 
+            // Booking rules
+            'allowed_weekdays' => ['nullable', 'array'],
+            'allowed_weekdays.*' => ['integer', 'between:1,7'],
+            'day_start_time' => ['nullable', 'date_format:H:i'],
+            'day_end_time' => ['nullable', 'date_format:H:i', 'after:day_start_time'],
+
             // Discounts and donations
             'use_special_discount' => ['boolean'],
             'use_donation' => ['boolean'],
@@ -107,6 +113,7 @@ class RoomRules
             'custom_message' => ['nullable', 'string'],
 
             'secret_message' => ['nullable', 'string'],
+            'secret_message_days_before' => ['nullable', 'integer', 'min:1'],
 
             // Calendar configuration
             'external_slot_provider' => [
