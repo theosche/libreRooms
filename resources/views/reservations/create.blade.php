@@ -163,7 +163,7 @@
         @endif
 
         <div class="btn-group">
-            <a class="btn btn-secondary" href="{{ url()->previous() }}">{{ __('Cancel') }}</a>
+            <a class="btn btn-secondary" href="{{ route('rooms.show', $room) }}">{{ __('Cancel') }}</a>
         @if ($isCreate)
             <button type="submit" class="btn btn-primary" name="action" value="prepare">{{ __('Send request') }}</button>
         @elseif ($isEdit)

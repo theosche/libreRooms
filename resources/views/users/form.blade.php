@@ -120,7 +120,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ url()->previous() }}" class="btn btn-secondary">
+                <a href="{{ route('users.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
