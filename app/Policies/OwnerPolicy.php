@@ -73,15 +73,6 @@ class OwnerPolicy
     }
 
     /**
-     * Determine whether the user can manage reservations for the owner's rooms.
-     * Requires moderator or admin role on the owner.
-     */
-    public function manageReservations(User $user, Owner $owner): bool
-    {
-        return $user->canManageOwner($owner);
-    }
-
-    /**
      * Determine whether the user can manage users for the owner.
      * Requires moderator or admin role on the owner.
      */
