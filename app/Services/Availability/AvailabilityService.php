@@ -41,12 +41,11 @@ class AvailabilityService
 
         // Restore original timezone
         date_default_timezone_set($originalTimezone);
-
         // Find which UIDs correspond to reservation events in one query
         $uids = array_filter(array_column($icalEvents, 'UID'));
-        $uidToReservationHash = ReservationEvent::whereIn('uid', $uids)
-            ->pluck('hash', 'uid');
-
+        $uidToReservationHash = ReservationEvent::whereIn('reservation_events.uid', $uids)
+            ->join('reservations', 'reservations.id', '=', 'reservation_events.reservation_id')
+            ->pluck('reservations.hash', 'reservation_events.uid');
         $busySlots = array_map(function ($e) use ($timezone, $uidToReservationHash) {
             $slot = [
                 'start' => Carbon::instance($e['DTSTART'])->setTimezone(new DateTimeZone($timezone)),
@@ -55,10 +54,9 @@ class AvailabilityService
                 'title' => $e['SUMMARY'] ?? null,
                 'description' => $e['DESCRIPTION'] ?? null,
             ];
-
-            if (isset($uidToReservationHash[$e['UID']])) {
-                $slot['url'] = route('reservations.prebook.pdf', $uidToReservationHash[$e['UID']]);
-            }
+            $slot['url'] = isset($uidToReservationHash[$e['UID']]) ?
+                route('reservations.prebook.pdf', $uidToReservationHash[$e['UID']])
+                : "";
 
             return $slot;
         }, $icalEvents);
