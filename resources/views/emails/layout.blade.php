@@ -81,7 +81,7 @@
             color: #ffffff !important;
             padding: 12px 24px;
             border-radius: 6px;
-            text-decoration: none;
+            text-decoration: none!important;
             font-weight: 500;
             margin: 8px 0;
         }
