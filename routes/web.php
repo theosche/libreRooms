@@ -253,7 +253,8 @@ Route::controller(\App\Http\Controllers\InvoiceController::class)->middleware(['
 Route::get(
     '/rooms/{room:slug}/availability',
     [AvailabilityController::class, 'show']
-)->name('rooms.availability');
+)->name('rooms.availability')
+    ->middleware(\App\Http\Middleware\ReadOnlySession::class);
 
 // Public reservation access via hash (for tenants)
 Route::get('/r/{hash}/prebook.pdf', [\App\Http\Controllers\PdfController::class, 'prebook'])->name('reservations.prebook.pdf');
