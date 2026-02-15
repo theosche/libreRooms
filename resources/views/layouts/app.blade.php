@@ -13,7 +13,7 @@
 <body>
 <header class="header">
     <nav class="nav @auth nav-authenticated @endauth">
-        <a href="/" class="nav-logo">{{ config('app.name') }}</a>
+        <a href="/" class="nav-logo"><img src="/images/logo-text.png" width="200px"></a>
 
         @auth
             <button type="button" class="nav-toggle" onclick="toggleNavMenu()" aria-label="{{ __('Menu') }}">
