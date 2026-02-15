@@ -1,3 +1,5 @@
+<div align="center"><img src="public/images/logo-full.png" height="16%" width="16%"></div>
+
 # LibreRooms
 
 > **[ENGLISH BELOW](#english-version)**
