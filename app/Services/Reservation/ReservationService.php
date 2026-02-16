@@ -43,12 +43,12 @@ class ReservationService
 
         // Calculate sum of discounts
         $discountIds = $request->input('discounts', []);
-        $sumDiscounts = $this->pricing->calculateSumDiscounts($room, $discountIds, $fullPrice);
+        [$sumDiscounts, $discountsData] = $this->pricing->calculateSumDiscounts($room, $discountIds, $fullPrice);
 
         // Use transaction for DB + CalDAV operations
         $reservation = DB::transaction(function () use (
             $room, $contact, $status, $isConfirmed, $user, $request,
-            $eventsWithPrices, $fullPrice, $sumDiscounts, $discountIds
+            $eventsWithPrices, $fullPrice, $sumDiscounts, $discountsData
         ) {
             // Create Reservation
             $reservation = Reservation::create([
@@ -60,6 +60,7 @@ class ReservationService
                 'description' => $request->input('res_description'),
                 'full_price' => $fullPrice,
                 'sum_discounts' => $sumDiscounts,
+                'discounts' => $discountsData,
                 'special_discount' => $request->input('special_discount'),
                 'donation' => $request->input('donation'),
                 'custom_message' => $request->input('custom_message'),
@@ -102,11 +103,6 @@ class ReservationService
                 CustomFieldValue::fromReservationAndField($reservation, $customField, $value);
             }
 
-            // Attach discounts
-            if (! empty($discountIds)) {
-                $reservation->discounts()->attach($discountIds);
-            }
-
             // Create invoice if confirmed
             if ($isConfirmed) {
                 $this->createInvoice($reservation);
@@ -120,7 +116,6 @@ class ReservationService
             'room.owner.contact',
             'tenant',
             'events',
-            'discounts',
             'invoice',
         ]);
 
@@ -186,7 +181,6 @@ class ReservationService
             'room.owner.contact',
             'tenant',
             'events',
-            'discounts',
             'invoice',
         ]);
 
@@ -265,11 +259,11 @@ class ReservationService
 
         // Calculate sum of discounts
         $discountIds = $request->input('discounts', []);
-        $sumDiscounts = $this->pricing->calculateSumDiscounts($room, $discountIds, $fullPrice);
+        [$sumDiscounts, $discountsData] = $this->pricing->calculateSumDiscounts($room, $discountIds, $fullPrice);
 
         DB::transaction(function () use (
             $reservation, $contact, $room, $request,
-            $eventsWithPrices, $fullPrice, $sumDiscounts, $discountIds, $wasCancelled, $confirm
+            $eventsWithPrices, $fullPrice, $sumDiscounts, $discountsData, $wasCancelled, $confirm
         ) {
             // Update Reservation
             $reservation->update([
@@ -279,6 +273,7 @@ class ReservationService
                 'description' => $request->input('res_description'),
                 'full_price' => $fullPrice,
                 'sum_discounts' => $sumDiscounts,
+                'discounts' => $discountsData,
                 'special_discount' => $request->input('special_discount'),
                 'donation' => $request->input('donation'),
                 'custom_message' => $request->input('custom_message'),
@@ -365,8 +360,6 @@ class ReservationService
                 CustomFieldValue::fromReservationAndField($reservation, $customField, $value);
             }
 
-            // Sync discounts
-            $reservation->discounts()->sync($discountIds);
         });
 
         // Reload reservation
@@ -374,7 +367,6 @@ class ReservationService
             'room.owner.contact',
             'tenant',
             'events',
-            'discounts',
         ]);
 
         // Update prebook PDF if WebDAV enabled and status is PENDING

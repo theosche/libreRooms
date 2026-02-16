@@ -160,19 +160,23 @@
                         </td>
                         <td class="px-4 py-3 text-sm font-medium" onclick="event.stopPropagation()">
                             <div class="action-group">
+                                @if($isConfirmed || $isFinished)
+                                    <a href="{{ route('reservations.show', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}"><x-action-icon action="view" /></a>
+                                @endif
                                 @if($canEdit)
                                     @if($isPending && $canManage)
-                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-success">{{ __('Review') }}</a>
+                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-success" title="{{ __('Review') }}"><x-action-icon action="review" /></a>
                                     @else
-                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-primary">{{ __('Edit') }}</a>
+                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}"><x-action-icon action="edit" /></a>
                                     @endif
                                 @endif
 
                                 @if($canCancel)
                                     <button type="button"
                                             onclick="openCancelModal({{ $reservation->id }})"
-                                            class="link-danger">
-                                        {{ __('Cancel') }}
+                                            class="link-danger"
+                                            title="{{ __('Cancel') }}">
+                                        <x-action-icon action="cancel" />
                                     </button>
                                 @endif
                             </div>
@@ -199,7 +203,7 @@
                                                     <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                                     </svg>
-                                                    <span>{{ $event->startLocalTz()->format('d.m.Y H:i') }} → {{ $event->endLocalTz()->format('H:i') }}</span>
+                                                    <span>{{ $event->dateString(false) }}</span>
                                                 </div>
                                             @endforeach
                                         </div>

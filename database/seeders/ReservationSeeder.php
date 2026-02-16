@@ -2,15 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ReservationStatus;
+use App\Models\Contact;
+use App\Models\CustomFieldValue;
 use App\Models\Invoice;
 use App\Models\Owner;
 use App\Models\Reservation;
-use App\Models\CustomFieldValue;
 use App\Models\ReservationEvent;
-use App\Models\Contact;
 use Illuminate\Database\Seeder;
-use App\Enums\ReservationStatus;
-use App\Enums\ContactTypes;
 
 class ReservationSeeder extends Seeder
 {
@@ -25,14 +24,21 @@ class ReservationSeeder extends Seeder
                     ->count(rand(5, 15))
                     ->for($room)
                     ->state(fn () => [
-                        'tenant_id'  => Contact::inRandomOrder()->first()->id,
+                        'tenant_id' => Contact::inRandomOrder()->first()->id,
                     ])
                     ->create()
                     ->each(function ($reservation) use ($room, $owner) {
                         if ($room->discounts->isNotEmpty() && rand(0, 1)) {
-                            $discounts = $room->discounts
+                            $selectedDiscounts = $room->discounts
                                 ->random(rand(1, min(2, $room->discounts->count())));
-                            $reservation->discounts()->attach($discounts);
+                            $discountsData = $selectedDiscounts->map(function ($discount) use ($reservation) {
+                                $amount = $discount->type->value === 'fixed'
+                                    ? (float) $discount->value
+                                    : (float) $discount->value * (float) $reservation->full_price / 100;
+
+                                return [$discount->id, $discount->name, round($amount, 2)];
+                            })->values()->toArray();
+                            $reservation->update(['discounts' => $discountsData]);
                         }
 
                         if ($room->customFields->isNotEmpty()) {

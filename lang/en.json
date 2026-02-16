@@ -332,6 +332,7 @@
     "Are you sure you want to delete this room? This action cannot be undone.": "Are you sure you want to delete this room? This action cannot be undone.",
 
     "Back to rooms": "Back to rooms",
+    "Back to reservations": "Back to reservations",
     "Reserve this room": "Reserve this room",
     "Calendar": "Calendar",
     "Administrator mode - You see all information": "Administrator mode - You see all information",
@@ -1022,6 +1023,7 @@
     "Reservable times - Please note that this will prevent multi-day events": "Reservable times - Please note that this will prevent multi-day events",
     "Start time": "Start time",
     "End time": "End time",
+    "Download ICS event": "Download ICS event",
     "Allowed booking days": "Allowed booking days",
     "If none selected, all days are allowed.": "If none selected, all days are allowed.",
     "Day start time": "Day start time",

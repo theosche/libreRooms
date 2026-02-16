@@ -79,16 +79,16 @@
                         </td>
                         <td class="px-4 py-3 text-sm font-medium">
                             <div class="action-group">
-                                <a href="{{ route('room-unavailabilities.edit', [$unavailability] + redirect_back_params()) }}" class="link-primary">
-                                    {{ __('Edit') }}
+                                <a href="{{ route('room-unavailabilities.edit', [$unavailability] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                    <x-action-icon action="edit" />
                                 </a>
 
                                 <form action="{{ route('room-unavailabilities.destroy', [$unavailability] + redirect_back_params()) }}" method="POST" class="inline"
                                       onsubmit="return confirm('{{ __('Are you sure you want to delete this unavailability?') }}');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="link-danger">
-                                        {{ __('Delete') }}
+                                    <button type="submit" class="link-danger" title="{{ __('Delete') }}">
+                                        <x-action-icon action="delete" />
                                     </button>
                                 </form>
                             </div>

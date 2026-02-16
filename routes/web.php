@@ -36,7 +36,6 @@ Route::bind('reservation', function (string $value) {
         'tenant',              // The Contact associated with this reservation
         'events.options',      // ReservationEvents with their options
         'customFieldValues',   // Custom field values for this reservation
-        'discounts',           // Discounts applied to this reservation
         'confirmedBy',         // User who confirmed (if applicable)
     ])
         ->findOrFail($value);
@@ -140,6 +139,7 @@ Route::controller(ReservationController::class)->group(function () {
 });
 Route::controller(ReservationController::class)->middleware(['auth', 'verified'])->group(function () {
     Route::get('/reservations', 'index')->name('reservations.index');
+    Route::get('/reservations/{reservation}', 'show')->name('reservations.show');
     Route::get('/reservations/{reservation}/edit', 'edit')->name('reservations.edit');
     Route::put('/reservations/{reservation}', 'update')->name('reservations.update');
     Route::post('/reservations/{reservation}/cancel', 'cancel')->name('reservations.cancel');

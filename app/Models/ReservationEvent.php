@@ -3,12 +3,12 @@
 namespace App\Models;
 
 use App\DTO\EventDTO;
+use App\Enums\ReservationStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Carbon\Carbon;
-use App\Enums\ReservationStatus;
 
 class ReservationEvent extends Model
 {
@@ -32,10 +32,11 @@ class ReservationEvent extends Model
     public function eventDTO(bool $addStatusInTitle = false, ?ReservationStatus $forceStatus = null): EventDTO
     {
         $title = $addStatusInTitle ?
-            $this->reservation->title . ' - ' . ($forceStatus?->label() ?? $this->reservation->status->label()) :
+            $this->reservation->title.' - '.($forceStatus?->label() ?? $this->reservation->status->label()) :
             $this->reservation->title;
+
         return new EventDTO(
-            title: $title ,
+            title: $title,
             status: $this->reservation->status->icalStatus(),
             start: $this->start,
             end: $this->end,
@@ -60,11 +61,26 @@ class ReservationEvent extends Model
     public function startLocalTz(): Carbon
     {
         $timezone = $this->reservation->room->getTimezone();
+
         return $this->start->copy()->setTimezone($timezone);
     }
+
     public function endLocalTz(): Carbon
     {
         $timezone = $this->reservation->room->getTimezone();
+
         return $this->end->copy()->setTimezone($timezone);
+    }
+
+    public function dateString(bool $showDayName = true): string
+    {
+        $start = $this->startLocalTz();
+        $end = $this->endLocalTz();
+        $isMultiDay = ! $start->isSameDay($end);
+        if ($isMultiDay) {
+            return $start->isoFormat(($showDayName ? 'dddd ' : '').'L HH:mm').' → '.$end->isoFormat(($showDayName ? 'dddd ' : '').'L HH:mm');
+        } else {
+            return $start->isoFormat(($showDayName ? 'dddd ' : '').'L HH:mm').' → '.$end->isoFormat('HH:mm');
+        }
     }
 }

@@ -65,7 +65,7 @@ class ReservationController extends Controller
             ])->values(),
         ];
         // Get enabled discounts
-        $enabledDiscounts = old('discounts') ?? $reservation?->discounts->modelKeys() ?? [];
+        $enabledDiscounts = old('discounts') ?? $reservation?->discountIds() ?? [];
 
         // Prepare events data
         if (! is_null(old('events'))) {
@@ -131,6 +131,28 @@ class ReservationController extends Controller
         $this->authorize('reserve', $room);
 
         return $this->reservationForm($room, null);
+    }
+
+    public function show(Reservation $reservation): View|RedirectResponse
+    {
+        if (! in_array($reservation->status, [ReservationStatus::CONFIRMED, ReservationStatus::FINISHED])) {
+            return redirect()->route('reservations.index')->with('error', __('This reservation cannot be viewed.'));
+        }
+
+        $user = auth()->user();
+        $room = $reservation->room;
+
+        // User must be moderator/admin of the room OR the tenant must be one of their contacts
+        if (! $user->can('manageReservations', $room) && ! $user->canAccessContact($reservation->tenant)) {
+            abort(403);
+        }
+
+        $reservation->load('invoice');
+
+        return view('reservations.show', [
+            'reservation' => $reservation,
+            'user' => $user,
+        ]);
     }
 
     public function edit(Reservation $reservation): View|RedirectResponse

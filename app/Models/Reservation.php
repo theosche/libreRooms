@@ -2,13 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\ReservationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Enums\ReservationStatus;
 
 class Reservation extends Model
 {
@@ -24,6 +23,7 @@ class Reservation extends Model
         'description',
         'full_price',
         'sum_discounts',
+        'discounts',
         'special_discount',
         'donation',
         'custom_message',
@@ -34,6 +34,7 @@ class Reservation extends Model
 
     protected $casts = [
         'status' => ReservationStatus::class,
+        'discounts' => 'array',
         'sum_discounts' => 'decimal:2',
         'special_discount' => 'decimal:2',
         'donation' => 'decimal:2',
@@ -56,9 +57,12 @@ class Reservation extends Model
         return $this->belongsTo(User::class, 'confirmed_by');
     }
 
-    public function discounts(): BelongsToMany
+    /**
+     * @return array<int, int>
+     */
+    public function discountIds(): array
     {
-        return $this->belongsToMany(RoomDiscount::class, 'reservation_discount');
+        return array_map(fn (array $d) => $d[0], $this->discounts ?? []);
     }
 
     public function customFieldValues(): HasMany
@@ -80,11 +84,13 @@ class Reservation extends Model
     {
         return (float) ($this->full_price - $this->sum_discounts - $this->special_discount);
     }
+
     public function finalPrice(): float
     {
         if ($this->room->price_mode === \App\Enums\PriceModes::FREE) {
             return (float) $this->donation;
         }
+
         return (float) ($this->full_price - $this->sum_discounts - $this->special_discount + $this->donation);
     }
 
@@ -95,12 +101,7 @@ class Reservation extends Model
 
     public function isEditable(): bool
     {
-        return (in_array($this->status, [ReservationStatus::PENDING, ReservationStatus::CANCELLED])
-                && !$this->isPaid());
-    }
-
-    public function url(): string
-    {
-
+        return in_array($this->status, [ReservationStatus::PENDING, ReservationStatus::CANCELLED])
+                && ! $this->isPaid();
     }
 }

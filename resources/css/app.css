@@ -268,19 +268,12 @@ a {
     align-items: center;
 }
 .action-group {
-    display: grid;
-    grid-template-columns: 2fr 2fr;
-    gap: 0.25rem;
-}
-@media (max-width: 1000px) {
-    .action-group {
-        grid-template-columns: 1fr;
-    }
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
 }
 .action-group a, .action-group button {
-    height: 100%;
-    width: 100%;
-    text-align: left;
+    cursor: pointer;
 }
 
 .styled-form .hidden {

@@ -112,13 +112,13 @@
                         <td class="px-4 py-3 text-sm font-medium" onclick="event.stopPropagation()">
                             <div class="action-group">
                                 @can('manageUsers', $owner)
-                                    <a href="{{ route('owners.users.index', [$owner] + redirect_back_params()) }}" class="link-primary">
-                                        {{ __('Users') }}
+                                    <a href="{{ route('owners.users.index', [$owner] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
+                                        <x-action-icon action="users" />
                                     </a>
                                 @endcan
                                 @can('update', $owner)
-                                    <a href="{{ route('owners.edit', [$owner] + redirect_back_params()) }}" class="link-primary">
-                                        {{ __('Edit') }}
+                                    <a href="{{ route('owners.edit', [$owner] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                        <x-action-icon action="edit" />
                                     </a>
                                 @endcan
                                 @can('delete', $owner)
@@ -129,12 +129,12 @@
                                             $otherUsers = $owner->users->where('id', '!=', $user->id);
                                         @endphp
                                         @if($otherUsers->count() > 0 && !$user->is_global_admin)
-                                            <button type="submit" class="link-danger" onclick="return confirm('{{ __('Are you sure you want to remove this owner from your list? Other users also have access to it, it will not be permanently deleted.') }}')">
-                                                {{ __('Remove') }}
+                                            <button type="submit" class="link-danger" title="{{ __('Remove') }}" onclick="return confirm('{{ __('Are you sure you want to remove this owner from your list? Other users also have access to it, it will not be permanently deleted.') }}')">
+                                                <x-action-icon action="remove" />
                                             </button>
                                         @else
-                                            <button type="submit" class="link-danger" onclick="return confirm('{{ __('Are you sure you want to permanently delete this owner? This action cannot be undone and will also delete all associated rooms.') }}')">
-                                                {{ __('Delete') }}
+                                            <button type="submit" class="link-danger" title="{{ __('Delete') }}" onclick="return confirm('{{ __('Are you sure you want to permanently delete this owner? This action cannot be undone and will also delete all associated rooms.') }}')">
+                                                <x-action-icon action="delete" />
                                             </button>
                                         @endif
                                     </form>

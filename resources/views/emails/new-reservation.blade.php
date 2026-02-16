@@ -21,7 +21,7 @@
     <ul>
         @foreach ($reservation->events as $event)
             <li>
-                {{ $event->startLocalTz()->format('d.m.Y - H:i') }} {{ __('to') }} {{ $event->endLocalTz()->format('d.m.Y - H:i') }}
+                {{ $event->dateString() }}
                 <a href="{{ route('reservations.event-ics', ['hash' => $reservation->hash, 'uid' => $event->uid]) }}" style="font-size: 12px;">(ics)</a>
             </li>
         @endforeach

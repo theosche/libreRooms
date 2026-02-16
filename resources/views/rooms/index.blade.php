@@ -146,8 +146,8 @@
                                 @if($user?->can('viewAdmin', App\Models\Room::class))
                                     <div class="flex gap-2">
                                         @can('update', $room)
-                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary text-sm">
-                                                {{ __('Edit') }}
+                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary text-sm" title="{{ __('Edit') }}">
+                                                <x-action-icon action="edit" />
                                             </a>
                                         @endcan
                                     </div>
@@ -226,22 +226,22 @@
                                 <td class="px-4 py-3 text-sm font-medium">
                                     <div class="action-group" onclick="event.stopPropagation()">
                                         @can('manageUsers', $room)
-                                            <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary">
-                                                {{ __('Users') }}
+                                            <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
+                                                <x-action-icon action="users" />
                                             </a>
                                         @endcan
 
                                         @can('update', $room)
-                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary">
-                                                {{ __('Edit') }}
+                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                                <x-action-icon action="edit" />
                                             </a>
 
                                             <form action="{{ route('rooms.destroy', [$room] + redirect_back_params()) }}" method="POST"
                                                   onsubmit="return confirm('{{ __('Are you sure you want to delete this room? This action cannot be undone.') }}');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="link-danger">
-                                                    {{ __('Delete') }}
+                                                <button type="submit" class="link-danger" title="{{ __('Delete') }}">
+                                                    <x-action-icon action="delete" />
                                                 </button>
                                             </form>
                                         @endcan

@@ -332,6 +332,7 @@
     "Are you sure you want to delete this room? This action cannot be undone.": "Êtes-vous sûr de vouloir supprimer cette salle ? Cette action est irréversible.",
 
     "Back to rooms": "Retour aux salles",
+    "Back to reservations": "Retour aux réservations",
     "Reserve this room": "Réserver cette salle",
     "Calendar": "Calendrier",
     "Administrator mode - You see all information": "Mode admin - Vous voyez toutes les informations",
@@ -1022,6 +1023,7 @@
     "Reservable times - Please note that this will prevent multi-day events": "Horaires réservables - Attention, cela empêchera les événements multi-jours",
     "Start time": "Heure de début",
     "End time": "Heure de fin",
+    "Download ICS event": "Télécharger l'événement ICS",
     "Allowed booking days": "Jours de réservation autorisés",
     "If none selected, all days are allowed.": "Si aucun sélectionné, tous les jours sont autorisés.",
     "Day start time": "Heure d'ouverture",

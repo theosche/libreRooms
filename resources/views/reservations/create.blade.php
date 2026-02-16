@@ -134,7 +134,7 @@
         {{-- 9. Price summary --}}
         @include('reservations.partials.price-summary', [
             'discounts' => $room->discounts->where('active', true),
-            'reservationDiscounts' => $reservation?->discounts->modelKeys() ?? [],
+            'reservationDiscounts' => $reservation?->discountIds() ?? [],
             'specialDiscount' => $reservation?->special_discount ?? 0,
             'donation' => $reservation?->donation ?? 0,
             'useFreePrice' => $room->price_mode == App\Enums\PriceModes::FREE,

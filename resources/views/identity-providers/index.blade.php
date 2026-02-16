@@ -62,12 +62,12 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex justify-end gap-2">
-                                <a href="{{ route('identity-providers.edit', $provider) }}" class="link-primary">
-                                    {{ __('Edit') }}
+                            <div class="action-group">
+                                <a href="{{ route('identity-providers.edit', $provider) }}" class="link-primary" title="{{ __('Edit') }}">
+                                    <x-action-icon action="edit" />
                                 </a>
-                                <button type="button" onclick="confirmDelete({{ $provider->id }})" class="link-danger">
-                                    {{ __('Delete') }}
+                                <button type="button" onclick="confirmDelete({{ $provider->id }})" class="link-danger" title="{{ __('Delete') }}">
+                                    <x-action-icon action="delete" />
                                 </button>
                                 <form id="delete-form-{{ $provider->id }}" action="{{ route('identity-providers.destroy', $provider) }}" method="POST" class="hidden">
                                     @csrf

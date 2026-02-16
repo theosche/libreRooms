@@ -126,24 +126,24 @@
                             @endphp
                             <div class="action-group">
                                 @if($canManage)
-                                    <a href="#" class="link-primary" onclick="event.preventDefault(); showShareModal({{ $contact->id }}, '{{ addslashes($contact->display_name()) }}')">
-                                        {{ __('Share') }}
+                                    <a href="#" class="link-primary" title="{{ __('Share') }}" onclick="event.preventDefault(); showShareModal({{ $contact->id }}, '{{ addslashes($contact->display_name()) }}')">
+                                        <x-action-icon action="share" />
                                     </a>
                                 @endif
-                                <a href="{{ route('contacts.edit', [$contact] + redirect_back_params()) }}" class="link-primary">
-                                    {{ __('Edit') }}
+                                <a href="{{ route('contacts.edit', [$contact] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                    <x-action-icon action="edit" />
                                 </a>
                                 @if($canManage)
                                     <form method="POST" action="{{ route('contacts.destroy', [$contact] + redirect_back_params()) }}" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         @if($userOwnsContact && $contact->users->where('id', '!=', $user->id)->count() > 0)
-                                            <button type="submit" class="link-danger" onclick="return confirm('{{ __('Are you sure you want to remove this contact from your list? Other users also have access to it, it will not be permanently deleted.') }}')">
-                                                {{ __('Remove') }}
+                                            <button type="submit" class="link-danger" title="{{ __('Remove') }}" onclick="return confirm('{{ __('Are you sure you want to remove this contact from your list? Other users also have access to it, it will not be permanently deleted.') }}')">
+                                                <x-action-icon action="remove" />
                                             </button>
                                         @else
-                                            <button type="submit" class="link-danger" onclick="return confirm('{{ __('Are you sure you want to permanently delete this contact? This action cannot be undone.') }}')">
-                                                {{ __('Delete') }}
+                                            <button type="submit" class="link-danger" title="{{ __('Delete') }}" onclick="return confirm('{{ __('Are you sure you want to permanently delete this contact? This action cannot be undone.') }}')">
+                                                <x-action-icon action="delete" />
                                             </button>
                                         @endif
                                     </form>

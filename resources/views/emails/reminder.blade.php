@@ -17,7 +17,7 @@
     <ul>
         @foreach ($reservation->events as $event)
             <li>
-                {{ $event->startLocalTz()->format('d.m.Y - H:i') }} {{ __('to') }} {{ $event->endLocalTz()->format('d.m.Y - H:i') }}
+                {{ $event->dateString() }}
             </li>
         @endforeach
     </ul>

@@ -127,12 +127,12 @@
                         </td>
                         <td class="px-4 py-3 text-right text-sm font-medium">
                             <div class="action-group">
-                                <a href="{{ route('users.edit', [$user] + redirect_back_params()) }}" class="link-primary">
-                                    {{ __('Edit') }}
+                                <a href="{{ route('users.edit', [$user] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                    <x-action-icon action="edit" />
                                 </a>
                                 @if($user->id !== auth()->id())
-                                    <button type="button" onclick="confirmDelete({{ $user->id }})" class="link-danger">
-                                        {{ __('Delete') }}
+                                    <button type="button" onclick="confirmDelete({{ $user->id }})" class="link-danger" title="{{ __('Delete') }}">
+                                        <x-action-icon action="delete" />
                                     </button>
                                     <form id="delete-form-{{ $user->id }}" action="{{ route('users.destroy', [$user] + redirect_back_params()) }}" method="POST" class="hidden">
                                         @csrf

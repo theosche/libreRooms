@@ -28,7 +28,7 @@ class PricingService
         $endDay = $endInTimezone->copy()->startOfDay();
 
         // Check if crosses midnight
-        $crossesMidnight = !$startDay->eq($endDay);
+        $crossesMidnight = ! $startDay->eq($endDay);
 
         // Extract hours with decimals
         $startHour = $startInTimezone->hour + $startInTimezone->minute / 60;
@@ -95,16 +95,16 @@ class PricingService
         $label = '';
         if (count($segments) > 1) {
             if ($nbShort) {
-                $label .= $nbShort . 'x ' . __('short booking') . ', ';
+                $label .= $nbShort.'x '.__('short booking').', ';
             }
             if ($nbFull) {
-                $label .= $nbFull . 'x ' . __('full day booking') . ', ';
+                $label .= $nbFull.'x '.__('full day booking').', ';
             }
             $label = substr($label, 0, -2);
         } else {
             if ($nbShort) {
                 $label .= __('Short booking');
-            } else if ($nbFull) {
+            } elseif ($nbFull) {
                 $label .= __('Full day booking');
             }
         }
@@ -127,13 +127,13 @@ class PricingService
             return ['label' => '', 'price' => 0];
         }
 
-        $label = count($optionIds) === 1 ? __('option') . ': ' : __('options') . ': ';
+        $label = count($optionIds) === 1 ? __('option').': ' : __('options').': ';
         $price = 0;
 
         foreach ($optionIds as $optionId) {
             $option = $room->options->firstWhere('id', $optionId);
             if ($option) {
-                $label .= $option->name . ', ';
+                $label .= $option->name.', ';
                 $price += $option->price;
             }
         }
@@ -146,17 +146,24 @@ class PricingService
         ];
     }
 
-    public function calculateSumDiscounts(Room $room, array $discountIds, $fullPrice): float
+    /**
+     * @return array{0: float, 1: array<int, array{0: int, 1: string, 2: float}>}
+     */
+    public function calculateSumDiscounts(Room $room, array $discountIds, float $fullPrice): array
     {
         $sumDiscounts = 0;
-        if (is_array($discountIds) && !empty($discountIds)) {
+        $discountsData = [];
+        if (! empty($discountIds)) {
             foreach ($room->discounts as $discount) {
                 if (in_array($discount->id, $discountIds)) {
-                    $sumDiscounts += $this->calculateDiscountValue($discount, $fullPrice);
+                    $amount = $this->calculateDiscountValue($discount, $fullPrice);
+                    $sumDiscounts += $amount;
+                    $discountsData[] = [$discount->id, $discount->name, round($amount, 2)];
                 }
             }
         }
-        return $sumDiscounts;
+
+        return [$sumDiscounts, $discountsData];
     }
 
     /**
@@ -170,5 +177,4 @@ class PricingService
             default => 0,
         };
     }
-
 }

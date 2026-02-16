@@ -110,8 +110,8 @@
                                           onsubmit="return confirm('{{ __('Are you sure you want to remove this user?') }}');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="link-danger">
-                                            {{ __('Remove') }}
+                                        <button type="submit" class="link-danger" title="{{ __('Remove') }}">
+                                            <x-action-icon action="remove" />
                                         </button>
                                     </form>
                                 @else

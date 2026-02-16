@@ -1,7 +1,7 @@
 @php
     $totalPrice = $reservation->events->sum('price');
     $useFreePrice = $room->price_mode == App\Enums\PriceModes::FREE;
-    $hasDiscounts = $reservation->discounts->isNotEmpty() || $reservation->special_discount || ($reservation->donation && !$useFreePrice);
+    $hasDiscounts = !empty($reservation->discounts) || $reservation->special_discount || ($reservation->donation && !$useFreePrice);
     $finalTotal = $reservation->finalPrice();
 @endphp
 
@@ -16,19 +16,10 @@
     </table>
     <div style="height: 5mm;"></div>
     <table class="totals-table">
-            @foreach($reservation->discounts as $discount)
-                @php
-                    $discountValue = $discount->type->value === 'fixed'
-                        ? $discount->value
-                        : ($discount->value * $totalPrice / 100);
-                    $discountLabel = $discount->name;
-                    if ($discount->type->value === 'percent') {
-                        $discountLabel .= " (-" . $discount->value . "%)";
-                    }
-                @endphp
+            @foreach($reservation->discounts ?? [] as $discount)
                 <tr>
-                    <td class="label-col">{{ $discountLabel }}</td>
-                    <td class="price-col">{{ currency(-$discountValue, $owner) }}</td>
+                    <td class="label-col">{{ $discount[1] }}</td>
+                    <td class="price-col">{{ currency(-$discount[2], $owner) }}</td>
                 </tr>
             @endforeach
 

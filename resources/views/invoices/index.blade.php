@@ -148,8 +148,8 @@
                                     @if(in_array($computedStatus, [\App\Enums\InvoiceStatus::LATE, \App\Enums\InvoiceStatus::TOO_LATE]))
                                         <form method="POST" action="{{ route('invoices.remind', [$invoice] + redirect_back_params()) }}" class="inline">
                                             @csrf
-                                            <button type="submit" class="link-primary" onclick="return confirm('{{ __('Send a payment reminder?') }}')">
-                                                {{ __('Reminder') }}
+                                            <button type="submit" class="link-primary" title="{{ __('Reminder') }}" onclick="return confirm('{{ __('Send a payment reminder?') }}')">
+                                                <x-action-icon action="reminder" />
                                             </button>
                                         </form>
                                     @endif
@@ -157,23 +157,25 @@
                                     @if(!in_array($computedStatus, [\App\Enums\InvoiceStatus::PAID, \App\Enums\InvoiceStatus::CANCELLED]))
                                         <form method="POST" action="{{ route('invoices.pay', [$invoice] + redirect_back_params()) }}" class="inline">
                                             @csrf
-                                            <button type="submit" class="link-success" onclick="return confirm('{{ __('Mark this invoice as paid?') }}')">
-                                                {{ __('Paid') }}
+                                            <button type="submit" class="link-success" title="{{ __('Paid') }}" onclick="return confirm('{{ __('Mark this invoice as paid?') }}')">
+                                                <x-action-icon action="paid" />
                                             </button>
                                         </form>
 
                                         <button type="button"
                                                 onclick="openCancelModal({{ $invoice->id }})"
-                                                class="link-danger">
-                                            {{ __('Cancel') }}
+                                                class="link-danger"
+                                                title="{{ __('Cancel') }}">
+                                            <x-action-icon action="cancel" />
                                         </button>
                                     @endif
 
                                     @if($invoice->canRecreate())
                                         <button type="button"
                                                 onclick="openRecreateModal({{ $invoice->id }})"
-                                                class="link-primary">
-                                            {{ __('Recreate') }}
+                                                class="link-primary"
+                                                title="{{ __('Recreate') }}">
+                                            <x-action-icon action="recreate" />
                                         </button>
                                     @endif
                                 @else
@@ -181,14 +183,16 @@
                                     @if ($invoice->reminder_count)
                                         <a href="{{ route('reservations.reminder.pdf', $invoice->reservation->hash) }}"
                                            target="_blank"
-                                           class="link-primary">
-                                            {{ __('View PDF') }}
+                                           class="link-primary"
+                                           title="{{ __('View PDF') }}">
+                                            <x-action-icon action="pdf" />
                                         </a>
                                     @else
                                         <a href="{{ route('reservations.invoice.pdf', $invoice->reservation->hash) }}"
                                            target="_blank"
-                                           class="link-primary">
-                                            {{ __('View PDF') }}
+                                           class="link-primary"
+                                           title="{{ __('View PDF') }}">
+                                            <x-action-icon action="pdf" />
                                         </a>
                                     @endif
                                 @endif
