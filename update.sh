@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Mise à jour LibreRooms"
+echo "Updating LibreRooms"
 
 git pull origin main
 
@@ -20,4 +20,4 @@ sudo chmod -R 755 .
 sudo chown -R www-data:www-data storage bootstrap/cache .env
 sudo chmod -R 775 storage bootstrap/cache .env
 
-echo "Mise à jour terminée"
+echo "Update successful"
