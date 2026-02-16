@@ -112,17 +112,17 @@
                         <td class="px-4 py-3 text-sm font-medium" onclick="event.stopPropagation()">
                             <div class="action-group">
                                 @can('manageUsers', $owner)
-                                    <a href="{{ route('owners.users.index', $owner) }}" class="link-primary">
+                                    <a href="{{ route('owners.users.index', [$owner] + redirect_back_params()) }}" class="link-primary">
                                         {{ __('Users') }}
                                     </a>
                                 @endcan
                                 @can('update', $owner)
-                                    <a href="{{ route('owners.edit', $owner) }}" class="link-primary">
+                                    <a href="{{ route('owners.edit', [$owner] + redirect_back_params()) }}" class="link-primary">
                                         {{ __('Edit') }}
                                     </a>
                                 @endcan
                                 @can('delete', $owner)
-                                    <form method="POST" action="{{ route('owners.destroy', $owner) }}" class="inline">
+                                    <form method="POST" action="{{ route('owners.destroy', [$owner] + redirect_back_params()) }}" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         @php

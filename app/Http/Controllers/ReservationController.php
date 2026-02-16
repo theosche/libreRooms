@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Http\Requests\StoreReservationRequest;
 use App\Http\Requests\UpdateReservationRequest;
 use App\Models\Contact;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class ReservationController extends Controller
 {
+    use RedirectsBack;
+
     private function reservationForm(Room $room, ?Reservation $reservation): View
     {
         $room->load('owner', 'discounts', 'options', 'customFields');
@@ -145,14 +148,12 @@ class ReservationController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $view = $request->input('view', 'mine'); // 'mine' or 'admin'
 
         // Check if user can access admin view (moderator or admin role)
-        $canViewAdmin = $user->can('viewMine', Room::class);
-
-        if ($view === 'admin' && ! $canViewAdmin) {
-            $view = 'mine';
-        }
+        $canViewAdmin = $user->can('viewAdmin', Room::class);
+        $view = $canViewAdmin ?
+            $request->input('view', 'admin') :
+            'mine';
 
         if ($view === 'admin') {
             // Get all room IDs where user has moderator or admin rights (global admins see all via model method)
@@ -242,11 +243,7 @@ class ReservationController extends Controller
             __('New reservation created successfully - pending confirmation.') :
             __('New reservation confirmed successfully.');
 
-        if (auth()->check()) {
-            return redirect()->route('reservations.index')->with('success', $msg);
-        } else {
-            return redirect()->route('rooms.index')->with('success', $msg);
-        }
+        return $this->redirectBack('reservations.index')->with('success', $msg);
     }
 
     public function update(UpdateReservationRequest $request, Reservation $reservation, ReservationService $service): RedirectResponse
@@ -266,15 +263,11 @@ class ReservationController extends Controller
             __('Reservation updated successfully - pending confirmation.') :
             __('Reservation confirmed successfully.');
 
-        if (auth()->check()) {
-            return redirect()->route('reservations.index')->with('success', $msg);
-        } else {
-            return redirect()->route('rooms.index')->with('success', $msg);
-        }
+        return $this->redirectBack('reservations.index')->with('success', $msg);
     }
 
     /**
-     * Cancel a reservation (from index page modal)
+     * Cancel a reservation (from index page modal or edit form)
      */
     public function cancel(Request $request, Reservation $reservation, ReservationService $service): RedirectResponse
     {
@@ -303,9 +296,9 @@ class ReservationController extends Controller
         $service->cancel($reservation, $sendEmail, $reason);
 
         if ($reservation->isPaid()) {
-            return redirect()->route('reservations.index')->with('success', __('Reservation cancelled. Warning - invoice already paid.'));
+            return $this->redirectBack('reservations.index')->with('success', __('Reservation cancelled. Warning - invoice already paid.'));
         }
 
-        return redirect()->route('reservations.index')->with('success', __('Reservation cancelled successfully.'));
+        return $this->redirectBack('reservations.index')->with('success', __('Reservation cancelled successfully.'));
     }
 }

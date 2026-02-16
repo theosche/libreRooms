@@ -1,4 +1,4 @@
-@can('viewMine', App\Models\Room::class)
+@can('viewAdmin', App\Models\Room::class)
     <nav class="page-submenu">
         {{-- Navigation items --}}
         <a href="{{ route('rooms.index', ['view' => 'available', 'display' => request('display', 'cards')]) }}"

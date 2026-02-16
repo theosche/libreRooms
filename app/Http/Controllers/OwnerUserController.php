@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Owner;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +12,8 @@ use Illuminate\View\View;
 
 class OwnerUserController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display the list of users with access to the owner.
      */
@@ -56,14 +59,14 @@ class OwnerUserController extends Controller
             // Update the role
             $user->owners()->updateExistingPivot($owner->id, ['role' => $validated['role']]);
 
-            return redirect()->route('owners.users.index', $owner)
+            return $this->redirectBack('owners.users.index', ['owner' => $owner])
                 ->with('success', __('User role updated.'));
         }
 
         // Attach user to owner
         $user->owners()->attach($owner->id, ['role' => $validated['role']]);
 
-        return redirect()->route('owners.users.index', $owner)
+        return $this->redirectBack('owners.users.index', ['owner' => $owner])
             ->with('success', __('User added successfully.'));
     }
 
@@ -76,7 +79,7 @@ class OwnerUserController extends Controller
 
         // Check if user has access to this owner
         if (! $owner->users()->where('users.id', $user->id)->exists()) {
-            return redirect()->route('owners.users.index', $owner)
+            return $this->redirectBack('owners.users.index', ['owner' => $owner])
                 ->with('error', __('This user does not have access to this owner.'));
         }
 
@@ -86,7 +89,7 @@ class OwnerUserController extends Controller
         // Detach user from owner
         $owner->users()->detach($user->id);
 
-        return redirect()->route('owners.users.index', $owner)
+        return $this->redirectBack('owners.users.index', ['owner' => $owner])
             ->with('success', __('User removed successfully.'));
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +12,8 @@ use Illuminate\View\View;
 
 class RoomUserController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display the list of users with access to the room.
      */
@@ -55,14 +58,14 @@ class RoomUserController extends Controller
             // Update the role
             $room->users()->updateExistingPivot($user->id, ['role' => $validated['role']]);
 
-            return redirect()->route('rooms.users.index', $room)
+            return $this->redirectBack('rooms.users.index', ['room' => $room])
                 ->with('success', __('User role updated.'));
         }
 
         // Attach user to room
         $room->users()->attach($user->id, ['role' => $validated['role']]);
 
-        return redirect()->route('rooms.users.index', $room)
+        return $this->redirectBack('rooms.users.index', ['room' => $room])
             ->with('success', __('User added successfully.'));
     }
 
@@ -75,14 +78,14 @@ class RoomUserController extends Controller
 
         // Check if user has access to this room
         if (! $room->users()->where('users.id', $user->id)->exists()) {
-            return redirect()->route('rooms.users.index', $room)
+            return $this->redirectBack('rooms.users.index', ['room' => $room])
                 ->with('error', __('This user does not have direct access to this room.'));
         }
 
         // Detach user from room
         $room->users()->detach($user->id);
 
-        return redirect()->route('rooms.users.index', $room)
+        return $this->redirectBack('rooms.users.index', ['room' => $room])
             ->with('success', __('User removed successfully.'));
     }
 }

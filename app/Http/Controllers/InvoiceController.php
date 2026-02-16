@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Contact;
 use App\Models\Invoice;
 use App\Models\Room;
@@ -18,6 +19,8 @@ use function Illuminate\Support\defer;
 
 class InvoiceController extends Controller
 {
+    use RedirectsBack;
+
     public function __construct(
         private MailService $mail,
     ) {}
@@ -31,7 +34,7 @@ class InvoiceController extends Controller
         $view = $request->input('view', 'mine'); // 'mine' or 'admin'
 
         // Check if user can access admin view (moderator or admin role)
-        $canViewAdmin = $user->can('viewMine', Room::class);
+        $canViewAdmin = $user->can('viewAdmin', Room::class);
 
         if ($view === 'admin' && ! $canViewAdmin) {
             $view = 'mine';
@@ -116,12 +119,12 @@ class InvoiceController extends Controller
         // Check permission
         $user = auth()->user();
         if (! $user->can('manageReservations', $invoice->reservation->room)) {
-            return back()->with('error', __('You do not have permission to send a reminder.'));
+            return $this->redirectBack('invoices.index')->with('error', __('You do not have permission to send a reminder.'));
         }
 
         // Check status - must be LATE or TOO_LATE
         if (! in_array($invoice->computed_status, [InvoiceStatus::LATE, InvoiceStatus::TOO_LATE])) {
-            return back()->with('error', __('Cannot send reminder for this invoice (status: :status).', ['status' => $invoice->computed_status->label()]));
+            return $this->redirectBack('invoices.index')->with('error', __('Cannot send reminder for this invoice (status: :status).', ['status' => $invoice->computed_status->label()]));
         }
 
         $owner = $invoice->owner;
@@ -150,7 +153,7 @@ class InvoiceController extends Controller
             });
         }
 
-        return back()->with('success', __('Reminder #:count sent.', ['count' => $invoice->reminder_count]));
+        return $this->redirectBack('invoices.index')->with('success', __('Reminder #:count sent.', ['count' => $invoice->reminder_count]));
     }
 
     /**
@@ -161,19 +164,19 @@ class InvoiceController extends Controller
         // Check permission
         $user = auth()->user();
         if (! $user->can('manageReservations', $invoice->reservation->room)) {
-            return back()->with('error', __('You do not have permission to edit this invoice.'));
+            return $this->redirectBack('invoices.index')->with('error', __('You do not have permission to edit this invoice.'));
         }
 
         // Check status - cannot mark paid or cancelled invoices
         if ($invoice->isFinal()) {
-            return back()->with('error', __('This invoice cannot be marked as paid.'));
+            return $this->redirectBack('invoices.index')->with('error', __('This invoice cannot be marked as paid.'));
         }
 
         $invoice->update([
             'paid_at' => now(),
         ]);
 
-        return back()->with('success', __('Invoice marked as paid.'));
+        return $this->redirectBack('invoices.index')->with('success', __('Invoice marked as paid.'));
     }
 
     /**
@@ -184,12 +187,12 @@ class InvoiceController extends Controller
         // Check permission
         $user = auth()->user();
         if (! $user->can('manageReservations', $invoice->reservation->room)) {
-            return back()->with('error', __('You do not have permission to cancel this invoice.'));
+            return $this->redirectBack('invoices.index')->with('error', __('You do not have permission to cancel this invoice.'));
         }
 
         // Cannot cancel paid invoices
         if ($invoice->paid_at !== null) {
-            return back()->with('error', __('Cannot cancel a paid invoice.'));
+            return $this->redirectBack('invoices.index')->with('error', __('Cannot cancel a paid invoice.'));
         }
 
         $invoice->update([
@@ -212,7 +215,7 @@ class InvoiceController extends Controller
             });
         }
 
-        return back()->with('success', __('Invoice cancelled.'));
+        return $this->redirectBack('invoices.index')->with('success', __('Invoice cancelled.'));
     }
 
     /**
@@ -223,12 +226,12 @@ class InvoiceController extends Controller
         // Check permission
         $user = auth()->user();
         if (! $user->can('manageReservations', $invoice->reservation->room)) {
-            return back()->with('error', __('You do not have permission to recreate this invoice.'));
+            return $this->redirectBack('invoices.index')->with('error', __('You do not have permission to recreate this invoice.'));
         }
 
         // Can only recreate cancelled invoices
         if (! $invoice->canRecreate()) {
-            return back()->with('error', __('Only a cancelled invoice linked to a confirmed reservation can be recreated.'));
+            return $this->redirectBack('invoices.index')->with('error', __('Only a cancelled invoice linked to a confirmed reservation can be recreated.'));
         }
 
         $firstDueAt = Invoice::calculateFirstDueAt($invoice->reservation, isRecreate: true);
@@ -263,6 +266,6 @@ class InvoiceController extends Controller
             });
         }
 
-        return back()->with('success', __('Invoice recreated with new due date: :date.', ['date' => $firstDueAt->format('d/m/Y')]));
+        return $this->redirectBack('invoices.index')->with('success', __('Invoice recreated with new due date: :date.', ['date' => $firstDueAt->format('d/m/Y')]));
     }
 }

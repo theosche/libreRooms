@@ -15,7 +15,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form method="POST" action="{{ isset($contact) ? route('contacts.update', $contact) : route('contacts.store') }}" class="styled-form">
+        <form method="POST" action="{{ isset($contact) ? route('contacts.update', [$contact] + redirect_back_query()) : route('contacts.store', redirect_back_query()) }}" class="styled-form">
             @csrf
             @if(isset($contact))
                 @method('PUT')
@@ -213,7 +213,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('contacts.index') }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('contacts.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -227,7 +227,7 @@
             </div>
         </form>
         @if(isset($contact))
-            <form id="delete-contact-form" action="{{ route('contacts.destroy', $contact) }}" method="POST" class="hidden">
+            <form id="delete-contact-form" action="{{ route('contacts.destroy', [$contact] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

@@ -11,7 +11,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form method="POST" action="{{ isset($unavailability) ? route('room-unavailabilities.update', $unavailability) : route('room-unavailabilities.store') }}" class="styled-form">
+        <form method="POST" action="{{ isset($unavailability) ? route('room-unavailabilities.update', [$unavailability] + redirect_back_query()) : route('room-unavailabilities.store', redirect_back_query()) }}" class="styled-form">
             @csrf
             @if(isset($unavailability))
                 @method('PUT')
@@ -94,7 +94,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('room-unavailabilities.index') }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('room-unavailabilities.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -109,7 +109,7 @@
         </form>
 
         @if(isset($unavailability))
-            <form id="delete-unavailability-form" action="{{ route('room-unavailabilities.destroy', $unavailability) }}" method="POST" class="hidden">
+            <form id="delete-unavailability-form" action="{{ route('room-unavailabilities.destroy', [$unavailability] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

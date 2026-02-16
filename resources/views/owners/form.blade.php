@@ -22,7 +22,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form method="POST" action="{{ isset($owner) ? route('owners.update', $owner) : route('owners.store') }}" class="styled-form">
+        <form method="POST" action="{{ isset($owner) ? route('owners.update', [$owner] + redirect_back_query()) : route('owners.store', redirect_back_query()) }}" class="styled-form">
             @csrf
             @if(isset($owner))
                 @method('PUT')
@@ -839,7 +839,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('owners.index') }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('owners.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -863,7 +863,7 @@
             </div>
         </form>
         @if(isset($owner))
-            <form id="delete-owner-form" action="{{ route('owners.destroy', $owner) }}" method="POST" class="hidden">
+            <form id="delete-owner-form" action="{{ route('owners.destroy', [$owner] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

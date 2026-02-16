@@ -106,11 +106,11 @@
                         </td>
                         <td class="px-4 py-3 text-sm font-medium">
                             <div class="action-group">
-                                <a href="{{ route('custom-fields.edit', $field) }}" class="link-primary">
+                                <a href="{{ route('custom-fields.edit', [$field] + redirect_back_params()) }}" class="link-primary">
                                     {{ __('Edit') }}
                                 </a>
 
-                                <form action="{{ route('custom-fields.destroy', $field) }}" method="POST" class="inline"
+                                <form action="{{ route('custom-fields.destroy', [$field] + redirect_back_params()) }}" method="POST" class="inline"
                                       onsubmit="return confirm('{{ __('Are you sure you want to delete this custom field?') }}');">
                                     @csrf
                                     @method('DELETE')

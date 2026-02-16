@@ -29,7 +29,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form method="POST" action="{{ isset($room) ? route('rooms.update', $room) : route('rooms.store') }}" class="styled-form" enctype="multipart/form-data">
+        <form method="POST" action="{{ isset($room) ? route('rooms.update', [$room] + redirect_back_query()) : route('rooms.store', redirect_back_query()) }}" class="styled-form" enctype="multipart/form-data">
             @csrf
             @if(isset($room))
                 @method('PUT')
@@ -793,7 +793,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('rooms.index', ['view' => 'mine']) }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('rooms.index', ['view' => 'mine']) }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -807,7 +807,7 @@
             </div>
         </form>
         @if(isset($room))
-            <form id="delete-room-form" action="{{ route('rooms.destroy', $room) }}" method="POST" class="hidden">
+            <form id="delete-room-form" action="{{ route('rooms.destroy', [$room] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Contact;
 use App\Models\Owner;
 use App\Models\Reservation;
@@ -17,6 +18,8 @@ use Illuminate\View\View;
 
 class OwnerController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      */
@@ -84,7 +87,7 @@ class OwnerController extends Controller
         // Attach current user as admin
         $user->owners()->attach($owner->id, ['role' => UserRole::ADMIN->value]);
 
-        return redirect()->route('owners.index')
+        return $this->redirectBack('owners.index')
             ->with('success', __('Owner created successfully.'));
     }
 
@@ -137,7 +140,7 @@ class OwnerController extends Controller
         // Update owner
         $owner->update($validated);
 
-        return redirect()->route('owners.index')
+        return $this->redirectBack('owners.index')
             ->with('success', __('Owner updated successfully.'));
     }
 
@@ -188,7 +191,7 @@ class OwnerController extends Controller
         // Delete the owner entirely (this will cascade to rooms)
         $owner->delete();
 
-        return redirect()->route('owners.index')
+        return $this->redirectBack('owners.index')
             ->with('success', __('Owner deleted permanently.'));
     }
 }

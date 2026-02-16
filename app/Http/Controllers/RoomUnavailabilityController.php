@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Room;
 use App\Models\RoomUnavailability;
 use App\Support\DateHelper;
@@ -13,6 +14,8 @@ use Illuminate\View\View;
 
 class RoomUnavailabilityController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      */
@@ -90,7 +93,7 @@ class RoomUnavailabilityController extends Controller
         // Create unavailability
         RoomUnavailability::create($validated);
 
-        return redirect()->route('room-unavailabilities.index')
+        return $this->redirectBack('room-unavailabilities.index')
             ->with('success', __('Unavailability created successfully.'));
     }
 
@@ -132,7 +135,7 @@ class RoomUnavailabilityController extends Controller
         // Update unavailability
         $roomUnavailability->update($validated);
 
-        return redirect()->route('room-unavailabilities.index')
+        return $this->redirectBack('room-unavailabilities.index')
             ->with('success', __('Unavailability updated successfully.'));
     }
 
@@ -145,7 +148,7 @@ class RoomUnavailabilityController extends Controller
 
         $roomUnavailability->delete();
 
-        return redirect()->route('room-unavailabilities.index')
+        return $this->redirectBack('room-unavailabilities.index')
             ->with('success', __('Unavailability deleted successfully.'));
     }
 }

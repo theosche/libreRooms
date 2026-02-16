@@ -11,7 +11,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form method="POST" action="{{ isset($discount) ? route('room-discounts.update', $discount) : route('room-discounts.store') }}" class="styled-form">
+        <form method="POST" action="{{ isset($discount) ? route('room-discounts.update', [$discount] + redirect_back_query()) : route('room-discounts.store', redirect_back_query()) }}" class="styled-form">
             @csrf
             @if(isset($discount))
                 @method('PUT')
@@ -142,7 +142,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('room-discounts.index') }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('room-discounts.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -157,7 +157,7 @@
         </form>
 
         @if(isset($discount))
-            <form id="delete-discount-form" action="{{ route('room-discounts.destroy', $discount) }}" method="POST" class="hidden">
+            <form id="delete-discount-form" action="{{ route('room-discounts.destroy', [$discount] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

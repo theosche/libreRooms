@@ -146,7 +146,7 @@
                                 @if($view === 'admin')
                                     {{-- Actions for admin view --}}
                                     @if(in_array($computedStatus, [\App\Enums\InvoiceStatus::LATE, \App\Enums\InvoiceStatus::TOO_LATE]))
-                                        <form method="POST" action="{{ route('invoices.remind', $invoice) }}" class="inline">
+                                        <form method="POST" action="{{ route('invoices.remind', [$invoice] + redirect_back_params()) }}" class="inline">
                                             @csrf
                                             <button type="submit" class="link-primary" onclick="return confirm('{{ __('Send a payment reminder?') }}')">
                                                 {{ __('Reminder') }}
@@ -155,7 +155,7 @@
                                     @endif
 
                                     @if(!in_array($computedStatus, [\App\Enums\InvoiceStatus::PAID, \App\Enums\InvoiceStatus::CANCELLED]))
-                                        <form method="POST" action="{{ route('invoices.pay', $invoice) }}" class="inline">
+                                        <form method="POST" action="{{ route('invoices.pay', [$invoice] + redirect_back_params()) }}" class="inline">
                                             @csrf
                                             <button type="submit" class="link-success" onclick="return confirm('{{ __('Mark this invoice as paid?') }}')">
                                                 {{ __('Paid') }}
@@ -337,8 +337,11 @@
     </div>
 
     <script>
+        const invoiceRedirectQuery = @json(http_build_query(redirect_back_params()));
+
         function openCancelModal(invoiceId) {
-            document.getElementById('cancel-form').action = '/invoices/' + invoiceId + '/cancel';
+            const query = invoiceRedirectQuery ? '?' + invoiceRedirectQuery : '';
+            document.getElementById('cancel-form').action = '/invoices/' + invoiceId + '/cancel' + query;
             document.getElementById('cancel-modal').classList.remove('hidden');
             document.getElementById('cancel-reason').value = '';
             document.getElementById('cancel-send-email').checked = true;
@@ -357,7 +360,8 @@
         }
 
         function openRecreateModal(invoiceId) {
-            document.getElementById('recreate-form').action = '/invoices/' + invoiceId + '/recreate';
+            const query = invoiceRedirectQuery ? '?' + invoiceRedirectQuery : '';
+            document.getElementById('recreate-form').action = '/invoices/' + invoiceId + '/recreate' + query;
             document.getElementById('recreate-modal').classList.remove('hidden');
             document.getElementById('recreate-reason').value = '';
             document.getElementById('recreate-send-email').checked = true;

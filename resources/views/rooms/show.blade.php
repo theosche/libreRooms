@@ -121,10 +121,10 @@
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-yellow-800 mb-4">{{ __('Administration') }}</h3>
                     <div class="space-y-2">
-                        <a href="{{ route('rooms.edit', $room) }}" class="block w-full btn btn-secondary text-center">
+                        <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="block w-full btn btn-secondary text-center">
                             {{ __('Edit room') }}
                         </a>
-                        <a href="{{ route('rooms.users.index', $room) }}" class="block w-full btn btn-secondary text-center">
+                        <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="block w-full btn btn-secondary text-center">
                             {{ __('Manage users') }}
                         </a>
                     </div>
@@ -186,7 +186,7 @@
                                 <div class="flex items-center justify-between text-sm">
                                     <span class="text-gray-600">
                                         @can('manageDiscounts', $room)
-                                            <a href="{{ route('room-discounts.edit', $discount) }}">
+                                            <a href="{{ route('room-discounts.edit', [$discount] + redirect_back_params()) }}">
                                                 {{ $discount->name }}
                                             </a>
                                         @else
@@ -278,7 +278,7 @@
                     <div class="space-y-3">
                         @foreach($room->options->where('active', true) as $option)
                             @can('manageOptions', $room)
-                                <a href="{{ route('room-options.edit', $option) }}">
+                                <a href="{{ route('room-options.edit', [$option] + redirect_back_params()) }}">
                             @endcan
                             <div class="border border-gray-200 rounded-lg p-3">
                                 <div class="flex justify-between items-start">

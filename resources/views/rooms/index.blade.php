@@ -9,7 +9,7 @@
 
         @include('rooms._submenu', ['view' => $view])
 
-        @cannot('viewMine', App\Models\Room::class)
+        @cannot('viewAdmin', App\Models\Room::class)
             <p class="mt-2 text-sm text-gray-600">{{ __('List of all rooms available for reservation') }}</p>
         @endcannot
     </div>
@@ -143,10 +143,10 @@
                                     {{ __('More info') }}
                                 </a>
 
-                                @if($user?->can('viewMine', App\Models\Room::class))
+                                @if($user?->can('viewAdmin', App\Models\Room::class))
                                     <div class="flex gap-2">
                                         @can('update', $room)
-                                            <a href="{{ route('rooms.edit', $room) }}" class="link-primary text-sm">
+                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary text-sm">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -178,7 +178,7 @@
                                 {{ __('Status') }}
                             </th>
                         @endif
-                        @if($user?->can('viewMine', App\Models\Room::class))
+                        @if($user?->can('viewAdmin', App\Models\Room::class))
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 {{ __('Actions') }}
                             </th>
@@ -222,21 +222,21 @@
                                     </div>
                                 </td>
                             @endif
-                            @if(auth()->user()?->can('viewMine', App\Models\Room::class))
+                            @if(auth()->user()?->can('viewAdmin', App\Models\Room::class))
                                 <td class="px-4 py-3 text-sm font-medium">
                                     <div class="action-group" onclick="event.stopPropagation()">
                                         @can('manageUsers', $room)
-                                            <a href="{{ route('rooms.users.index', $room) }}" class="link-primary">
+                                            <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary">
                                                 {{ __('Users') }}
                                             </a>
                                         @endcan
 
                                         @can('update', $room)
-                                            <a href="{{ route('rooms.edit', $room) }}" class="link-primary">
+                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary">
                                                 {{ __('Edit') }}
                                             </a>
 
-                                            <form action="{{ route('rooms.destroy', $room) }}" method="POST"
+                                            <form action="{{ route('rooms.destroy', [$room] + redirect_back_params()) }}" method="POST"
                                                   onsubmit="return confirm('{{ __('Are you sure you want to delete this room? This action cannot be undone.') }}');">
                                                 @csrf
                                                 @method('DELETE')
@@ -254,7 +254,7 @@
                         @php
                             $colspan = 3; // Nom, Propriétaire, Description
                             if ($view === 'mine') $colspan++; // Statut
-                            if (auth()->user()?->can('viewMine', App\Models\Room::class)) $colspan++; // Actions
+                            if (auth()->user()?->can('viewAdmin', App\Models\Room::class)) $colspan++; // Actions
                         @endphp
                         <tr id="details-{{ $room->id }}" class="details-row hidden">
                             <td colspan="{{ $colspan }}" class="px-4 py-3 bg-slate-50 border-t border-slate-200 w-0">
@@ -392,7 +392,7 @@
                         @php
                             $emptyColspan = 3;
                             if ($view === 'mine') $emptyColspan++;
-                            if ($user?->can('viewMine', App\Models\Room::class)) $emptyColspan++;
+                            if ($user?->can('viewAdmin', App\Models\Room::class)) $emptyColspan++;
                         @endphp
                         <tr>
                             <td colspan="{{ $emptyColspan }}" class="px-4 py-3 text-center text-gray-500">

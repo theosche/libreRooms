@@ -116,11 +116,11 @@
                         </td>
                         <td class="px-4 py-3 text-sm font-medium">
                             <div class="action-group">
-                                <a href="{{ route('room-discounts.edit', $discount) }}" class="link-primary">
+                                <a href="{{ route('room-discounts.edit', [$discount] + redirect_back_params()) }}" class="link-primary">
                                     {{ __('Edit') }}
                                 </a>
 
-                                <form action="{{ route('room-discounts.destroy', $discount) }}" method="POST" class="inline"
+                                <form action="{{ route('room-discounts.destroy', [$discount] + redirect_back_params()) }}" method="POST" class="inline"
                                       onsubmit="return confirm('{{ __('Are you sure you want to delete this discount?') }}');">
                                     @csrf
                                     @method('DELETE')

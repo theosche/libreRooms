@@ -31,7 +31,7 @@
             </div>
 
             <div>
-                <label for="tenant_id" class="block text-sm font-medium text-gray-700 mb-1">{{ __('Contact') }}</label>
+                <label for="tenant_id" class="block text-sm font-medium text-gray-700 mb-1">{{ __('Tenant') }}</label>
                 <select name="tenant_id" id="tenant_id" class="form-select">
                     <option value="">{{ __('All contacts') }}</option>
                     @foreach($contacts as $contact)
@@ -162,9 +162,9 @@
                             <div class="action-group">
                                 @if($canEdit)
                                     @if($isPending && $canManage)
-                                        <a href="{{ route('reservations.edit', $reservation) }}" class="link-success">{{ __('Review') }}</a>
+                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-success">{{ __('Review') }}</a>
                                     @else
-                                        <a href="{{ route('reservations.edit', $reservation) }}" class="link-primary">{{ __('Edit') }}</a>
+                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-primary">{{ __('Edit') }}</a>
                                     @endif
                                 @endif
 
@@ -367,8 +367,11 @@
         }
     }
 
+    const cancelRedirectQuery = @json(http_build_query(redirect_back_params()));
+
     function openCancelModal(reservationId) {
-        document.getElementById('cancel-form').action = '/reservations/' + reservationId + '/cancel';
+        const query = cancelRedirectQuery ? '?' + cancelRedirectQuery : '';
+        document.getElementById('cancel-form').action = '/reservations/' + reservationId + '/cancel' + query;
         document.getElementById('cancel-modal').classList.remove('hidden');
         document.getElementById('cancel-reason').value = '';
         document.getElementById('cancel-send-email').checked = true;

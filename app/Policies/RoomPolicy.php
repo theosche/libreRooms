@@ -21,7 +21,7 @@ class RoomPolicy
      * Determine whether the user can view the "mine" tab (manageable rooms).
      * Requires moderator+ role on at least one owner or direct moderator+ on a room.
      */
-    public function viewMine(User $user): bool
+    public function viewAdmin(User $user): bool
     {
         return $user->canModerateAnyRoom();
     }

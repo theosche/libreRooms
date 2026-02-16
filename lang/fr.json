@@ -864,6 +864,7 @@
     "Session expired. Please log in again.": "Session expirée. Veuillez vous reconnecter.",
     "The OIDC identity does not match your account.": "L'identité OIDC ne correspond pas à votre compte.",
     "You do not have access to this contact.": "Vous n'avez pas accès à ce contact.",
+    "This contact cannot be deleted because it is used for an owner.": "Ce contact ne peut pas être supprimé car il est utilisé par un propriétaire.",
     "This contact has active reservations (pending or confirmed). Please cancel them before deleting the contact.": "Ce contact a des réservations actives (en attente ou confirmées). Veuillez les annuler avant de supprimer le contact.",
     "This contact has unpaid invoices. Please mark them as paid or cancel them before deleting the contact.": "Ce contact a des factures impayées. Veuillez les marquer comme payées ou les annuler avant de supprimer le contact.",
     "Contact deleted permanently.": "Contact supprimé définitivement.",

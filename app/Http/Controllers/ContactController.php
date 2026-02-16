@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Contact;
 use App\Models\User;
 use App\Validation\ContactRules;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class ContactController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      *
@@ -86,7 +89,7 @@ class ContactController extends Controller
         // Attach to current user
         $user->contacts()->attach($contact->id);
 
-        return redirect()->route('contacts.index')
+        return $this->redirectBack('contacts.index')
             ->with('success', __('Contact created successfully.'));
     }
 
@@ -116,7 +119,7 @@ class ContactController extends Controller
 
         // Global admins can update any contact, otherwise check ownership
         if (! $user->canAccessContact($contact)) {
-            return redirect()->route('contacts.index')
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('You do not have access to this contact.'));
         }
 
@@ -133,7 +136,7 @@ class ContactController extends Controller
         // Update contact
         $contact->update($validated);
 
-        return redirect()->route('contacts.index')
+        return $this->redirectBack('contacts.index')
             ->with('success', __('Contact updated successfully.'));
     }
 
@@ -147,7 +150,7 @@ class ContactController extends Controller
 
         // Global admins can delete any contact, otherwise check ownership
         if (! $user->is_global_admin && ! $userOwnsContact) {
-            return redirect()->back()
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('You do not have access to this contact.'));
         }
 
@@ -164,13 +167,18 @@ class ContactController extends Controller
             }
         }
 
+        if ($contact->owners()->exists()) {
+            return $this->redirectBack('contacts.index')
+                ->with('error', __('This contact cannot be deleted because it is used for an owner.'));
+        }
+
         // Before deleting, check for active reservations
         $activeReservations = $contact->reservations()
             ->whereIn('status', [ReservationStatus::PENDING, ReservationStatus::CONFIRMED])
             ->exists();
 
         if ($activeReservations) {
-            return redirect()->back()
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('This contact has active reservations (pending or confirmed). Please cancel them before deleting the contact.'));
         }
 
@@ -183,7 +191,7 @@ class ContactController extends Controller
             ->exists();
 
         if ($unpaidInvoices) {
-            return redirect()->back()
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('This contact has unpaid invoices. Please mark them as paid or cancel them before deleting the contact.'));
         }
 
@@ -203,7 +211,7 @@ class ContactController extends Controller
 
         // Global admins can share any contact, otherwise check ownership
         if (! $currentUser->canAccessContact($contact)) {
-            return redirect()->route('contacts.index')
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('You do not have access to this contact.'));
         }
 
@@ -215,18 +223,18 @@ class ContactController extends Controller
         $userToShareWith = User::where('email', $validated['email'])->first();
 
         if (! $userToShareWith) {
-            return redirect()->back()
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('No user found with this email.'));
         }
 
-        if ($userToShareWith->id === $currentUser->id && !$currentUser->is_global_admin) {
-            return redirect()->back()
+        if ($userToShareWith->id === $currentUser->id && ! $currentUser->is_global_admin) {
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('You cannot share a contact with yourself.'));
         }
 
         // Check if already shared
         if ($userToShareWith->contacts()->where('contacts.id', $contact->id)->exists()) {
-            return redirect()->back()
+            return $this->redirectBack('contacts.index')
                 ->with('error', __('This contact is already shared with this user.'));
         }
 

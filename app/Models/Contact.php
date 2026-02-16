@@ -40,6 +40,11 @@ class Contact extends Model
         return $this->hasMany(Reservation::class, 'tenant_id');
     }
 
+    public function owners(): HasMany
+    {
+        return $this->hasMany(Owner::class);
+    }
+
     public function display_name(): string
     {
         return $this->type === ContactTypes::ORGANIZATION
@@ -49,12 +54,13 @@ class Contact extends Model
 
     public function invoiceEmail(): string
     {
-        return($this->invoice_email ?? $this->email);
+        return $this->invoice_email ?? $this->email;
     }
 
     public function bothEmailsUnique(): array
     {
         $emails = $this->invoice_email ? [$this->email, $this->invoice_email] : [$this->email];
+
         return array_unique($emails);
     }
 }

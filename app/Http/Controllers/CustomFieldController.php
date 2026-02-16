@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\CustomField;
 use App\Models\Room;
 use App\Validation\CustomFieldRules;
@@ -13,6 +14,8 @@ use Illuminate\View\View;
 
 class CustomFieldController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      */
@@ -113,7 +116,7 @@ class CustomFieldController extends Controller
         // Create field
         $field = CustomField::create($validated);
 
-        return redirect()->route('custom-fields.index')
+        return $this->redirectBack('custom-fields.index')
             ->with('success', __('Custom field created successfully.'));
     }
 
@@ -189,7 +192,7 @@ class CustomFieldController extends Controller
         // Update field
         $customField->update($validated);
 
-        return redirect()->route('custom-fields.index')
+        return $this->redirectBack('custom-fields.index')
             ->with('success', __('Custom field updated successfully.'));
     }
 
@@ -202,7 +205,7 @@ class CustomFieldController extends Controller
 
         $customField->delete();
 
-        return redirect()->route('custom-fields.index')
+        return $this->redirectBack('custom-fields.index')
             ->with('success', __('Custom field deleted successfully.'));
     }
 }

@@ -15,7 +15,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form method="POST" action="{{ isset($field) ? route('custom-fields.update', $field) : route('custom-fields.store') }}" class="styled-form">
+        <form method="POST" action="{{ isset($field) ? route('custom-fields.update', [$field] + redirect_back_query()) : route('custom-fields.store', redirect_back_query()) }}" class="styled-form">
             @csrf
             @if(isset($field))
                 @method('PUT')
@@ -138,7 +138,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('custom-fields.index') }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('custom-fields.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -152,7 +152,7 @@
             </div>
         </form>
         @if(isset($field))
-            <form id="delete-field-form" action="{{ route('custom-fields.destroy', $field) }}" method="POST" class="hidden">
+            <form id="delete-field-form" action="{{ route('custom-fields.destroy', [$field] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

@@ -18,7 +18,7 @@
     @endif
 
     <div class="bg-white rounded-lg shadow p-6">
-        <form id="user-form" method="POST" action="{{ isset($user) ? route('users.update', $user) : route('users.store') }}" class="styled-form">
+        <form id="user-form" method="POST" action="{{ isset($user) ? route('users.update', [$user] + redirect_back_query()) : route('users.store', redirect_back_query()) }}" class="styled-form">
             @csrf
             @if(isset($user))
                 @method('PUT')
@@ -120,7 +120,7 @@
             </div>
 
             <div class="btn-group justify-end mt-6">
-                <a href="{{ route('users.index') }}" class="btn btn-secondary">
+                <a href="{{ redirect_back_url('users.index') }}" class="btn btn-secondary">
                     {{ __('Cancel') }}
                 </a>
                 <button type="submit" class="btn btn-primary">
@@ -134,7 +134,7 @@
             </div>
         </form>
         @if(isset($user) && $user->id !== auth()->id())
-            <form id="delete-account-form" action="{{ route('users.destroy', $user) }}" method="POST" class="hidden">
+            <form id="delete-account-form" action="{{ route('users.destroy', [$user] + redirect_back_query()) }}" method="POST" class="hidden">
                 @csrf
                 @method('DELETE')
             </form>

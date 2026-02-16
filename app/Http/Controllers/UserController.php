@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Owner;
 use App\Models\User;
 use App\Services\Settings\SettingsService;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Show the login form
      */
@@ -211,7 +214,7 @@ class UserController extends Controller
         }
         $user->owners()->sync($ownerSync);
 
-        return redirect()->route('users.index')
+        return $this->redirectBack('users.index')
             ->with('success', __('User created successfully.'));
     }
 
@@ -274,7 +277,7 @@ class UserController extends Controller
         }
         $user->owners()->sync($ownerSync);
 
-        return redirect()->route('users.index')
+        return $this->redirectBack('users.index')
             ->with('success', __('User updated successfully.'));
     }
 
@@ -286,13 +289,13 @@ class UserController extends Controller
     {
         // Prevent deleting yourself
         if ($user->id === auth()->id()) {
-            return redirect()->route('users.index')
+            return $this->redirectBack('users.index')
                 ->with('error', __('You cannot delete your own account.'));
         }
 
         $user->delete();
 
-        return redirect()->route('users.index')
+        return $this->redirectBack('users.index')
             ->with('success', __('User deleted successfully.'));
     }
 

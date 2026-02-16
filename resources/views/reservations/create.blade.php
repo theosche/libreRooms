@@ -58,12 +58,11 @@
                 <a href="{{ route('rooms.show', $room) }}"><p class="form-subtitle">{{ $room->name }}</p></a>
             </div>
             <form method="POST" class="reservation-form styled-form"
-                  action="{{$isCreate ? route('reservations.store', $room) : ($isEdit ? route('reservations.update', $reservation) : "")}}">
+                  action="{{$isCreate ? route('reservations.store', [$room] + redirect_back_query()) : ($isEdit ? route('reservations.update', [$reservation] + redirect_back_query()) : "")}}">
         @if ($isEdit)
             @method('PUT')
         @endif
         @csrf
-
         @if($errors->any())
             <ul class="px-4 py-2 bg-red-100">
                 @foreach($errors->all() as $error)
@@ -163,7 +162,7 @@
         @endif
 
         <div class="btn-group">
-            <a class="btn btn-secondary" href="{{ route('rooms.show', $room) }}">{{ __('Cancel') }}</a>
+            <a class="btn btn-secondary" href="{{ url()->previous() }}">{{ __('Cancel') }}</a>
         @if ($isCreate)
             <button type="submit" class="btn btn-primary" name="action" value="prepare">{{ __('Send request') }}</button>
         @elseif ($isEdit)
@@ -196,7 +195,7 @@
         <div id="cancel-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
                 <h3 class="text-lg font-bold text-gray-900 mb-4">{{ __('Cancel reservation') }}</h3>
-                <form id="cancel-form" method="POST" action="{{ route('reservations.cancel', $reservation) }}">
+                <form id="cancel-form" method="POST" action="{{ route('reservations.cancel', [$reservation] + redirect_back_query()) }}">
                     @csrf
                     <div class="mb-4">
                         <label class="flex items-center gap-2 cursor-pointer">

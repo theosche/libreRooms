@@ -130,11 +130,11 @@
                                         {{ __('Share') }}
                                     </a>
                                 @endif
-                                <a href="{{ route('contacts.edit', $contact) }}" class="link-primary">
+                                <a href="{{ route('contacts.edit', [$contact] + redirect_back_params()) }}" class="link-primary">
                                     {{ __('Edit') }}
                                 </a>
                                 @if($canManage)
-                                    <form method="POST" action="{{ route('contacts.destroy', $contact) }}" class="inline">
+                                    <form method="POST" action="{{ route('contacts.destroy', [$contact] + redirect_back_params()) }}" class="inline">
                                         @csrf
                                         @method('DELETE')
                                         @if($userOwnsContact && $contact->users->where('id', '!=', $user->id)->count() > 0)
@@ -169,7 +169,7 @@
 </div>
 
 <!-- Modal de partage -->
-<div id="shareModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+<div id="shareModal" class="fixed inset-0 bg-gray-600/50 hidden items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
         <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Share contact') }}</h3>
         <p class="text-sm text-gray-600 mb-4">
@@ -198,9 +198,12 @@
 </div>
 
 <script>
+    const redirectQuery = @json(http_build_query(redirect_back_params()));
+
     function showShareModal(contactId, contactName) {
         document.getElementById('shareContactName').textContent = contactName;
-        document.getElementById('shareForm').action = `/contacts/${contactId}/share`;
+        const query = redirectQuery ? '?' + redirectQuery : '';
+        document.getElementById('shareForm').action = `/contacts/${contactId}/share` + query;
         document.getElementById('shareModal').classList.remove('hidden');
         document.getElementById('shareModal').classList.add('flex');
     }

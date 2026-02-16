@@ -6,6 +6,7 @@ use App\Enums\CalendarViewModes;
 use App\Enums\ReservationStatus;
 use App\Enums\RoomCurrentStatus;
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Image;
 use App\Models\Owner;
 use App\Models\Room;
@@ -20,6 +21,8 @@ use Illuminate\View\View;
 
 class RoomController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      *
@@ -34,9 +37,9 @@ class RoomController extends Controller
         $display = $request->input('display', 'cards'); // 'cards' or 'list'
 
         // Check if user can access "mine" view (must have moderator+ role on at least one owner)
-        $canViewMine = $user && $user->can('viewMine', Room::class);
+        $canViewAdmin = $user && $user->can('viewAdmin', Room::class);
 
-        if ($view === 'mine' && ! $canViewMine) {
+        if ($view === 'mine' && ! $canViewAdmin) {
             $view = 'available';
         }
 
@@ -173,7 +176,7 @@ class RoomController extends Controller
         // Handle image uploads and ordering
         $this->handleImageUploadsAndOrder($request, $room);
 
-        return redirect()->route('rooms.show', $room)
+        return $this->redirectBack('rooms.show', ['room' => $room])
             ->with('success', __('Room created successfully.'));
     }
 
@@ -536,7 +539,7 @@ class RoomController extends Controller
         // Update room
         $room->update($validated);
 
-        return redirect()->route('rooms.show', $room)
+        return $this->redirectBack('rooms.show', ['room' => $room])
             ->with('success', __('Room updated successfully.'));
     }
 
@@ -572,7 +575,7 @@ class RoomController extends Controller
 
         $room->delete();
 
-        return redirect()->route('rooms.index', ['view' => 'mine'])
+        return $this->redirectBack('rooms.index', ['view' => 'mine'])
             ->with('success', __('Room deleted successfully.'));
     }
 

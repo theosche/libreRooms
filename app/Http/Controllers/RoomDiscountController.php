@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Room;
 use App\Models\RoomDiscount;
 use App\Validation\RoomDiscountRules;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class RoomDiscountController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      */
@@ -85,7 +88,7 @@ class RoomDiscountController extends Controller
         // Create discount
         RoomDiscount::create($validated);
 
-        return redirect()->route('room-discounts.index')
+        return $this->redirectBack('room-discounts.index')
             ->with('success', __('Discount created successfully.'));
     }
 
@@ -129,7 +132,7 @@ class RoomDiscountController extends Controller
         // Update discount
         $roomDiscount->update($validated);
 
-        return redirect()->route('room-discounts.index')
+        return $this->redirectBack('room-discounts.index')
             ->with('success', __('Discount updated successfully.'));
     }
 
@@ -142,7 +145,7 @@ class RoomDiscountController extends Controller
 
         $roomDiscount->delete();
 
-        return redirect()->route('room-discounts.index')
+        return $this->redirectBack('room-discounts.index')
             ->with('success', __('Discount deleted successfully.'));
     }
 }

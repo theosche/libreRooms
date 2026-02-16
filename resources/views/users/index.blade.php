@@ -7,7 +7,7 @@
     <div class="page-header">
         <h1 class="page-header-title">{{ __('User management') }}</h1>
         <nav class="page-submenu">
-            <a href="{{ route('users.create') }}" class="page-submenu-item page-submenu-action">
+            <a href="{{ route('users.create', redirect_back_params()) }}" class="page-submenu-item page-submenu-action">
                 + {{ __('New user') }}
             </a>
         </nav>
@@ -77,7 +77,7 @@
                             <div class="flex items-center">
                                 <div>
                                     <div class="text-sm font-medium text-gray-900">
-                                        <a href="{{ route('users.edit', $user) }}">
+                                        <a href="{{ route('users.edit', [$user] + redirect_back_params()) }}">
                                             {{ $user->name }}
                                         </a>
                                     </div>
@@ -127,14 +127,14 @@
                         </td>
                         <td class="px-4 py-3 text-right text-sm font-medium">
                             <div class="action-group">
-                                <a href="{{ route('users.edit', $user) }}" class="link-primary">
+                                <a href="{{ route('users.edit', [$user] + redirect_back_params()) }}" class="link-primary">
                                     {{ __('Edit') }}
                                 </a>
                                 @if($user->id !== auth()->id())
                                     <button type="button" onclick="confirmDelete({{ $user->id }})" class="link-danger">
                                         {{ __('Delete') }}
                                     </button>
-                                    <form id="delete-form-{{ $user->id }}" action="{{ route('users.destroy', $user) }}" method="POST" class="hidden">
+                                    <form id="delete-form-{{ $user->id }}" action="{{ route('users.destroy', [$user] + redirect_back_params()) }}" method="POST" class="hidden">
                                         @csrf
                                         @method('DELETE')
                                     </form>

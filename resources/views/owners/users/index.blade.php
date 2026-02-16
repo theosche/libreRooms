@@ -10,7 +10,7 @@
             {{ __('Manage users with access to owner') }} <strong>{{ $owner->contact->display_name() }}</strong>
         </p>
         <nav class="page-submenu">
-            <a href="{{ route('owners.index') }}"
+            <a href="{{ redirect_back_url('owners.index') }}"
                class="page-submenu-item page-submenu-nav">
                 {{ __('Back to owners') }}
             </a>
@@ -96,7 +96,7 @@
                         <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                             <div class="action-group">
                             @if($canRemove)
-                                <form action="{{ route('owners.users.destroy', [$owner, $user]) }}" method="POST" class="inline"
+                                <form action="{{ route('owners.users.destroy', [$owner, $user] + redirect_back_query()) }}" method="POST" class="inline"
                                       onsubmit="return confirm('{{ __('Are you sure you want to remove this user?') }}');">
                                     @csrf
                                     @method('DELETE')
@@ -129,7 +129,7 @@
         <p class="text-sm text-gray-600 mb-4">
             {{ __('Add a user to owner') }} "<strong>{{ $owner->contact->display_name() }}</strong>"
         </p>
-        <form action="{{ route('owners.users.store', $owner) }}" method="POST">
+        <form action="{{ route('owners.users.store', [$owner] + redirect_back_query()) }}" method="POST">
             @csrf
             <div class="mb-4">
                 <label for="email" class="block text-sm font-medium text-gray-700 mb-1">

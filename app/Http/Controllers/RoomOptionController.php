@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Room;
 use App\Models\RoomOption;
 use App\Validation\RoomOptionRules;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class RoomOptionController extends Controller
 {
+    use RedirectsBack;
+
     /**
      * Display a listing of the resource.
      */
@@ -84,7 +87,7 @@ class RoomOptionController extends Controller
 
         RoomOption::create($validated);
 
-        return redirect()->route('room-options.index')
+        return $this->redirectBack('room-options.index')
             ->with('success', __('Option created successfully.'));
     }
 
@@ -128,7 +131,7 @@ class RoomOptionController extends Controller
         // Update option
         $roomOption->update($validated);
 
-        return redirect()->route('room-options.index')
+        return $this->redirectBack('room-options.index')
             ->with('success', __('Option updated successfully.'));
     }
 
@@ -141,7 +144,7 @@ class RoomOptionController extends Controller
 
         $roomOption->delete();
 
-        return redirect()->route('room-options.index')
+        return $this->redirectBack('room-options.index')
             ->with('success', __('Option deleted successfully.'));
     }
 }
