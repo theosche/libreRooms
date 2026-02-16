@@ -21,7 +21,7 @@ class PdfController extends Controller
     {
         $reservation = Reservation::where('hash', $hash)
             ->where('status', '!=', ReservationStatus::CANCELLED)
-            ->with(['room.owner.contact', 'tenant', 'events', 'discounts'])
+            ->with(['room.owner.contact', 'tenant', 'events'])
             ->firstOrFail();
 
         $pdfContent = $this->pdfService->generatePrebookingPDF($reservation);
@@ -39,7 +39,7 @@ class PdfController extends Controller
     public function invoice(string $hash): Response
     {
         $reservation = Reservation::where('hash', $hash)
-            ->with(['room.owner.contact', 'tenant', 'events', 'discounts', 'invoice'])
+            ->with(['room.owner.contact', 'tenant', 'events', 'invoice'])
             ->firstOrFail();
 
         if (! $reservation->invoice) {
@@ -62,7 +62,7 @@ class PdfController extends Controller
     public function reminder(string $hash): Response
     {
         $reservation = Reservation::where('hash', $hash)
-            ->with(['room.owner.contact', 'tenant', 'events', 'discounts', 'invoice'])
+            ->with(['room.owner.contact', 'tenant', 'events', 'invoice'])
             ->firstOrFail();
 
         if (! $reservation->invoice) {
