@@ -61,7 +61,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 @forelse($owner->users as $user)
                     @php
-                        $userRole = \App\Enums\OwnerUserRoles::tryFrom($user->pivot->role);
+                        $userRole = \App\Enums\UserRole::tryFrom($user->pivot->role);
                         $canRemove = auth()->user()->can('removeOwnerUser', [$owner, $user]);
                     @endphp
                     <tr>
@@ -83,9 +83,9 @@
                         <td class="px-4 py-3 whitespace-nowrap">
                             @php
                                 $badgeColor = match($userRole) {
-                                    \App\Enums\OwnerUserRoles::ADMIN => 'bg-red-100 text-red-800',
-                                    \App\Enums\OwnerUserRoles::MODERATOR => 'bg-yellow-100 text-yellow-800',
-                                    \App\Enums\OwnerUserRoles::VIEWER => 'bg-blue-100 text-blue-800',
+                                    \App\Enums\UserRole::ADMIN => 'bg-red-100 text-red-800',
+                                    \App\Enums\UserRole::MODERATOR => 'bg-yellow-100 text-yellow-800',
+                                    \App\Enums\UserRole::VIEWER => 'bg-blue-100 text-blue-800',
                                     default => 'bg-gray-100 text-gray-800',
                                 };
                             @endphp

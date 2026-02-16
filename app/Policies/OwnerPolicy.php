@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Enums\OwnerUserRoles;
+use App\Enums\UserRole;
 use App\Models\Owner;
 use App\Models\User;
 
@@ -10,12 +10,11 @@ class OwnerPolicy
 {
     /**
      * Determine whether the user can view any owners.
-     * Requires global admin or moderator+ role on at least one owner.
+     * Requires moderator+ role on at least one owner.
      */
     public function viewAny(User $user): bool
     {
-        // global admin case covered in canManageAnyOwner
-        return $user->canManageAnyOwner();
+        return $user->canModerateAnyOwner();
     }
 
     /**
@@ -29,11 +28,11 @@ class OwnerPolicy
 
     /**
      * Determine whether the user can create owners.
-     * Only global admins can create owners.
+     * Only global admins (handled by Gate::before).
      */
     public function create(User $user): bool
     {
-        return $user->is_global_admin;
+        return false;
     }
 
     /**
@@ -42,7 +41,7 @@ class OwnerPolicy
      */
     public function update(User $user, Owner $owner): bool
     {
-        return $user->isAdminOf($owner);
+        return $user->canAdminOwner($owner);
     }
 
     /**
@@ -51,7 +50,7 @@ class OwnerPolicy
      */
     public function delete(User $user, Owner $owner): bool
     {
-        return $user->isAdminOf($owner);
+        return $user->canAdminOwner($owner);
     }
 
     /**
@@ -60,7 +59,7 @@ class OwnerPolicy
      */
     public function share(User $user, Owner $owner): bool
     {
-        return $user->isAdminOf($owner);
+        return $user->canAdminOwner($owner);
     }
 
     /**
@@ -69,7 +68,7 @@ class OwnerPolicy
      */
     public function manageRooms(User $user, Owner $owner): bool
     {
-        return $user->isAdminOf($owner);
+        return $user->canAdminOwner($owner);
     }
 
     /**
@@ -78,7 +77,7 @@ class OwnerPolicy
      */
     public function manageUsers(User $user, Owner $owner): bool
     {
-        return $user->canManageOwner($owner);
+        return $user->canModerateOwner($owner);
     }
 
     /**
@@ -87,13 +86,13 @@ class OwnerPolicy
      */
     public function addOwnerUser(User $user, Owner $owner, string $role): bool
     {
-        if ($user->isAdminOf($owner)) {
+        if ($user->canAdminOwner($owner)) {
             return true;
         }
 
         // Moderators can only add viewers
-        if ($user->canManageOwner($owner)) {
-            return $role === OwnerUserRoles::VIEWER->value;
+        if ($user->canModerateOwner($owner)) {
+            return $role === UserRole::VIEWER->value;
         }
 
         return false;
@@ -111,15 +110,15 @@ class OwnerPolicy
             return false;
         }
 
-        if ($user->isAdminOf($owner)) {
+        if ($user->canAdminOwner($owner)) {
             return true;
         }
 
         // Moderators can only remove viewers
-        if ($user->canManageOwner($owner)) {
-            $targetRole = $targetUser->getRoleForOwner($owner);
+        if ($user->canModerateOwner($owner)) {
+            $targetRole = $targetUser->getOwnerRole($owner);
 
-            return $targetRole === OwnerUserRoles::VIEWER;
+            return $targetRole === UserRole::VIEWER;
         }
 
         return false;

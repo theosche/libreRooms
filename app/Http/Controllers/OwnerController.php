@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\OwnerUserRoles;
 use App\Enums\ReservationStatus;
+use App\Enums\UserRole;
 use App\Models\Contact;
 use App\Models\Owner;
 use App\Models\Reservation;
@@ -26,15 +26,10 @@ class OwnerController extends Controller
 
         $user = auth()->user();
 
-        // Get owners where user has moderator+ role
-        if ($user->is_global_admin) {
-            $query = Owner::with(['contact', 'users', 'rooms']);
-        } else {
-            // Get owners where user has at least moderator role
-            $ownerIds = $user->getOwnerIdsWithMinRole(OwnerUserRoles::MODERATOR);
-            $query = Owner::with(['contact', 'users', 'rooms'])
-                ->whereIn('id', $ownerIds);
-        }
+        // Get owners where user has moderator+ role (global admins see all via model method)
+        $ownerIds = $user->getOwnerIdsWithMinUserRole(UserRole::MODERATOR);
+        $query = Owner::with(['contact', 'users', 'rooms'])
+            ->whereIn('id', $ownerIds);
 
         $owners = $query->orderBy('id', 'asc')->paginate(15);
 
@@ -87,7 +82,7 @@ class OwnerController extends Controller
         $owner = Owner::create($validated);
 
         // Attach current user as admin
-        $user->owners()->attach($owner->id, ['role' => OwnerUserRoles::ADMIN->value]);
+        $user->owners()->attach($owner->id, ['role' => UserRole::ADMIN->value]);
 
         return redirect()->route('owners.index')
             ->with('success', __('Owner created successfully.'));
@@ -196,5 +191,4 @@ class OwnerController extends Controller
         return redirect()->route('owners.index')
             ->with('success', __('Owner deleted permanently.'));
     }
-
 }

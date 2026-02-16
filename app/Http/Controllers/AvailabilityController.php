@@ -14,7 +14,7 @@ class AvailabilityController
         $timezone = $room->getTimezone();
 
         // Determine view mode: admin always sees FULL
-        $canManage = $user?->canManageReservationsFor($room);
+        $canManage = $user?->can('manageReservations', $room);
         $viewMode = $canManage ? CalendarViewModes::FULL : $room->calendar_view_mode;
 
         // Load all busy slots (service returns all information)
@@ -116,6 +116,7 @@ class AvailabilityController
         if ($room->openedEveryday() && ! $room->day_start_time && ! $room->day_end_time) {
             return false; // No restrictions = no businessHours
         }
+
         return [
             // Convert ISO weekday (1-7, Mon-Sun) to FullCalendar format (0-6, Sun-Sat)
             'daysOfWeek' => $room->allowed_weekdays

@@ -97,7 +97,7 @@
                         </td>
                         <td class="px-4 py-3">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {{ \App\Enums\RoomUserRoles::tryFrom($user->pivot->role)?->label_short() }}
+                                {{ \App\Enums\UserRole::tryFrom($user->pivot->role)?->label_short() }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-500 hide-on-mobile">
@@ -105,14 +105,18 @@
                         </td>
                         <td class="px-4 py-3 text-right text-sm font-medium">
                             <div class="action-group">
-                                <form action="{{ route('rooms.users.destroy', [$room, $user]) }}" method="POST" class="inline"
-                                      onsubmit="return confirm('{{ __('Are you sure you want to remove this user?') }}');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="link-danger">
-                                        {{ __('Remove') }}
-                                    </button>
-                                </form>
+                                @can('removeRoomUser', [$room, $user])
+                                    <form action="{{ route('rooms.users.destroy', [$room, $user]) }}" method="POST" class="inline"
+                                          onsubmit="return confirm('{{ __('Are you sure you want to remove this user?') }}');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="link-danger">
+                                            {{ __('Remove') }}
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="text-gray-400 text-xs">-</span>
+                                @endcan
                             </div>
                         </td>
                     </tr>
@@ -157,9 +161,14 @@
                 <select name="role" id="role" required
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     @foreach($roles as $role)
-                        <option value="{{ $role->value }}" @selected(old('role') === $role->value)>
-                            {{ $role->label() }}
-                        </option>
+                        @php
+                            $canAddRole = auth()->user()->can('addRoomUser', [$room, $role->value]);
+                        @endphp
+                        @if($canAddRole)
+                            <option value="{{ $role->value }}" @selected(old('role') === $role->value)>
+                                {{ $role->label() }}
+                            </option>
+                        @endif
                     @endforeach
                 </select>
                 @error('role')

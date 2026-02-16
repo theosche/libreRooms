@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\OwnerUserRoles;
+use App\Enums\UserRole;
 use App\Models\Owner;
 use App\Models\User;
 use App\Services\Settings\SettingsService;
@@ -173,7 +173,7 @@ class UserController extends Controller
         return view('users.form', [
             'user' => null,
             'owners' => $owners,
-            'ownerRoles' => OwnerUserRoles::cases(),
+            'ownerRoles' => UserRole::cases(),
         ]);
     }
 
@@ -182,7 +182,7 @@ class UserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $roleValues = array_column(OwnerUserRoles::cases(), 'value');
+        $roleValues = array_column(UserRole::cases(), 'value');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
@@ -226,7 +226,7 @@ class UserController extends Controller
         return view('users.form', [
             'user' => $user,
             'owners' => $owners,
-            'ownerRoles' => OwnerUserRoles::cases(),
+            'ownerRoles' => UserRole::cases(),
         ]);
     }
 
@@ -235,7 +235,7 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): RedirectResponse
     {
-        $roleValues = array_column(OwnerUserRoles::cases(), 'value');
+        $roleValues = array_column(UserRole::cases(), 'value');
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
@@ -303,7 +303,7 @@ class UserController extends Controller
     /**
      * Show user's own profile
      */
-    public function profile(): View | RedirectResponse
+    public function profile(): View|RedirectResponse
     {
         $user = auth()->user();
         if (! $user->is_global_admin) {

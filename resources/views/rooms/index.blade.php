@@ -125,7 +125,7 @@
                             </h3>
 
                             <p class="text-sm text-gray-500 mb-2">
-                                @if($user?->isAdminOf($room->owner))
+                                @if($user?->can('update', $room->owner))
                                     <a href="{{ route('owners.edit', $room->owner) }}" class="hover:text-gray-700">
                                         {{ $room->owner->contact->display_name() }}
                                     </a>
@@ -143,7 +143,7 @@
                                     {{ __('More info') }}
                                 </a>
 
-                                @if($user?->canManageAnyOwner())
+                                @if($user?->can('viewMine', App\Models\Room::class))
                                     <div class="flex gap-2">
                                         @can('update', $room)
                                             <a href="{{ route('rooms.edit', $room) }}" class="link-primary text-sm">
@@ -178,7 +178,7 @@
                                 {{ __('Status') }}
                             </th>
                         @endif
-                        @if($user?->canManageAnyOwner())
+                        @if($user?->can('viewMine', App\Models\Room::class))
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 {{ __('Actions') }}
                             </th>
@@ -197,7 +197,7 @@
                                 </a>
                             </td>
                             <td class="px-4 py-3 text-sm text-gray-900">
-                                @if($user?->isAdminOf($room->owner))
+                                @if($user?->can('update', $room->owner))
                                     <a href="{{ route('owners.edit', $room->owner) }}" onclick="event.stopPropagation()">
                                         {{ $room->owner->contact->display_name() }}
                                     </a>
@@ -222,7 +222,7 @@
                                     </div>
                                 </td>
                             @endif
-                            @if(auth()->user()?->canManageAnyOwner())
+                            @if(auth()->user()?->can('viewMine', App\Models\Room::class))
                                 <td class="px-4 py-3 text-sm font-medium">
                                     <div class="action-group" onclick="event.stopPropagation()">
                                         @can('manageUsers', $room)
@@ -254,7 +254,7 @@
                         @php
                             $colspan = 3; // Nom, Propriétaire, Description
                             if ($view === 'mine') $colspan++; // Statut
-                            if (auth()->user()?->canManageAnyOwner()) $colspan++; // Actions
+                            if (auth()->user()?->can('viewMine', App\Models\Room::class)) $colspan++; // Actions
                         @endphp
                         <tr id="details-{{ $room->id }}" class="details-row hidden">
                             <td colspan="{{ $colspan }}" class="px-4 py-3 bg-slate-50 border-t border-slate-200 w-0">
@@ -312,9 +312,9 @@
                                         @if($room->discounts->where('active', true)->count() > 0)
                                             <div class="mt-3 space-y-1">
                                                 @foreach($room->discounts->where('active', true) as $discount)
-                                                    @if($user?->isAdminOf($room->owner))
+                                                    @can('manageDiscounts', $room)
                                                         <a href="{{ route('room-discounts.edit', $discount) }}">
-                                                    @endif
+                                                    @endcan
                                                     <div class="flex items-center gap-2 text-sm">
                                                         <span class="text-green-600 font-medium">
                                                             @if($discount->type->value === 'fixed')
@@ -328,9 +328,9 @@
                                                             <span class="text-slate-400 text-xs">({{ $discount->limit_to_contact_type->value === 'individual' ? __('Private') : __('Org.') }})</span>
                                                         @endif
                                                     </div>
-                                                    @if($user?->isAdminOf($room->owner))
+                                                    @can('manageDiscounts', $room)
                                                         </a>
-                                                    @endif
+                                                    @endcan
                                                 @endforeach
                                             </div>
                                         @endif
@@ -364,9 +364,9 @@
                                         @if($room->options->where('active', true)->count() > 0)
                                             <div class="space-y-2">
                                                 @foreach($room->options->where('active', true) as $option)
-                                                    @if($user?->isAdminOf($room->owner))
+                                                    @can('manageOptions', $room)
                                                         <a href="{{ route('room-options.edit', $option) }}">
-                                                    @endif
+                                                    @endcan
                                                     <div class="bg-white rounded-lg border border-slate-200 p-2">
                                                         <div class="flex justify-between items-start">
                                                             <span class="text-sm text-slate-700">{{ $option->name }}</span>
@@ -376,9 +376,9 @@
                                                             <p class="text-xs text-slate-500 mt-1">{{ $option->description }}</p>
                                                         @endif
                                                     </div>
-                                                    @if($user?->isAdminOf($room->owner))
+                                                    @can('manageOptions', $room)
                                                         </a>
-                                                    @endif
+                                                    @endcan
                                                 @endforeach
                                             </div>
                                         @else
@@ -392,7 +392,7 @@
                         @php
                             $emptyColspan = 3;
                             if ($view === 'mine') $emptyColspan++;
-                            if ($user?->canManageAnyOwner()) $emptyColspan++;
+                            if ($user?->can('viewMine', App\Models\Room::class)) $emptyColspan++;
                         @endphp
                         <tr>
                             <td colspan="{{ $emptyColspan }}" class="px-4 py-3 text-center text-gray-500">

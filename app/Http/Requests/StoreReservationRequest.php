@@ -2,12 +2,12 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Validator;
 use App\Validation\ContactRules;
 use App\Validation\CustomFieldValuesRules;
-use App\Validation\ReservationRules;
 use App\Validation\ReservationEventsValidator;
+use App\Validation\ReservationRules;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StoreReservationRequest extends FormRequest
 {
@@ -52,8 +52,7 @@ class StoreReservationRequest extends FormRequest
             CustomFieldValuesRules::createRules($room),
             ReservationRules::createRules($room, $this->input('contact_type')),
         );
-        if ($this->user()?->owners()->whereKey($room->owner_id)->exists()
-            || $this->user()?->is_global_admin) {
+        if ($this->user()?->can('manageReservations', $room)) {
             $rules = array_merge(
                 $rules,
                 ReservationRules::adminRules(),

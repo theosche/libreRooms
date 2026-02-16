@@ -6,6 +6,7 @@ use App\Models\Owner;
 use App\Models\Reservation;
 use App\Models\Room;
 use App\Models\SystemSettings;
+use App\Models\User;
 use App\Observers\ReservationObserver;
 use App\Policies\OwnerPolicy;
 use App\Policies\RoomPolicy;
@@ -39,6 +40,13 @@ class AppServiceProvider extends ServiceProvider
         // Register policies
         Gate::policy(Room::class, RoomPolicy::class);
         Gate::policy(Owner::class, OwnerPolicy::class);
+
+        // Global admins bypass all policy checks
+        Gate::before(function (User $user, string $ability) {
+            if ($user->is_global_admin) {
+                return true;
+            }
+        });
 
         // Register observers
         Reservation::observe(ReservationObserver::class);

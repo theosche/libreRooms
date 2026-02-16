@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\RoomUserRoles;
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -22,13 +22,13 @@ class RoomUserController extends Controller
 
         return view('rooms.users.index', [
             'room' => $room,
-            'roles' => RoomUserRoles::cases(),
+            'roles' => UserRole::cases(),
             'currentUser' => auth()->user(),
         ]);
     }
 
     /**
-     * Add a user to the room.
+     * Add a user to the room or update their role.
      */
     public function store(Request $request, Room $room): RedirectResponse
     {
@@ -36,7 +36,7 @@ class RoomUserController extends Controller
 
         $validated = $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
-            'role' => ['required', 'string', 'in:' . implode(',', array_column(RoomUserRoles::cases(), 'value'))],
+            'role' => ['required', 'string', 'in:'.implode(',', array_column(UserRole::cases(), 'value'))],
         ], [
             'email.exists' => __('No user found with this email.'),
         ]);
@@ -47,9 +47,16 @@ class RoomUserController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         // Check if user already has access
-        if ($room->users()->where('users.id', $user->id)->exists()) {
+        $existingRole = $user->getDirectRoomRole($room);
+        if ($existingRole !== null) {
+            // Check if current user can modify this target user's role (via policy)
+            $this->authorize('removeRoomUser', [$room, $user]);
+
+            // Update the role
+            $room->users()->updateExistingPivot($user->id, ['role' => $validated['role']]);
+
             return redirect()->route('rooms.users.index', $room)
-                ->with('error', __('This user already has access to this room.'));
+                ->with('success', __('User role updated.'));
         }
 
         // Attach user to room
@@ -64,7 +71,7 @@ class RoomUserController extends Controller
      */
     public function destroy(Room $room, User $user): RedirectResponse
     {
-        $this->authorize('manageUsers', $room);
+        $this->authorize('removeRoomUser', [$room, $user]);
 
         // Check if user has access to this room
         if (! $room->users()->where('users.id', $user->id)->exists()) {

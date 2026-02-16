@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum OwnerUserRoles: string
+enum UserRole: string
 {
     case VIEWER = 'viewer';
     case MODERATOR = 'moderator';
@@ -16,6 +16,7 @@ enum OwnerUserRoles: string
             self::ADMIN => __('Administrator'),
         };
     }
+
     public function label_short(): string
     {
         return match ($this) {

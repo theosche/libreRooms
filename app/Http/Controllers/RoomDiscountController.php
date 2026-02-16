@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Owner;
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\RoomDiscount;
 use App\Validation\RoomDiscountRules;
@@ -17,24 +17,14 @@ class RoomDiscountController extends Controller
      */
     public function index(Request $request): View
     {
+        $this->authorize('viewAnyDiscounts', Room::class);
+
         $user = auth()->user();
-
-        if (! $user?->canAdminAnyOwner()) {
-            abort(403, __('You must be an administrator of at least one owner to access this page.'));
-        }
-
-        // Get room IDs where user has admin rights
-        if ($user->is_global_admin) {
-            $ownerIds = Owner::pluck('id');
-        } else {
-            $ownerIds = $user->owners()->wherePivot('role', 'admin')->pluck('owners.id');
-        }
+        $roomIds = $user->getAccessibleRoomIds(UserRole::ADMIN);
 
         // Build query
         $query = RoomDiscount::with(['room.owner.contact'])
-            ->whereHas('room', function ($q) use ($ownerIds) {
-                $q->whereIn('owner_id', $ownerIds);
-            });
+            ->whereIn('room_id', $roomIds);
 
         // Filter by room
         $currentRoomId = $request->input('room_id');
@@ -46,8 +36,8 @@ class RoomDiscountController extends Controller
         $discounts = $query->paginate(15)->appends($request->except('page'));
 
         // Get available rooms for filters
-        $rooms = \App\Models\Room::with('owner.contact')
-            ->whereIn('owner_id', $ownerIds)
+        $rooms = Room::with('owner.contact')
+            ->whereIn('id', $roomIds)
             ->orderBy('name', 'asc')
             ->get();
 
@@ -63,19 +53,15 @@ class RoomDiscountController extends Controller
      */
     public function create(Request $request): View
     {
-        $user = auth()->user();
-        // Check if user has admin rights for at least one owner
-        if (! $user?->canAdminAnyOwner()) {
-            abort(403, __('You must be an administrator of at least one owner to create a discount.'));
-        }
+        $this->authorize('viewAnyDiscounts', Room::class);
 
-        // Get rooms where user has admin rights
-        if ($user->is_global_admin) {
-            $rooms = Room::with('owner.contact')->orderBy('name', 'asc')->get();
-        } else {
-            $ownerIds = $user->owners()->wherePivot('role', 'admin')->pluck('owners.id');
-            $rooms = Room::with('owner.contact')->whereIn('owner_id', $ownerIds)->orderBy('name', 'asc')->get();
-        }
+        $user = auth()->user();
+        $roomIds = $user->getAccessibleRoomIds(UserRole::ADMIN);
+
+        $rooms = Room::with('owner.contact')
+            ->whereIn('id', $roomIds)
+            ->orderBy('name', 'asc')
+            ->get();
 
         return view('room-discounts.form', [
             'discount' => null,
@@ -92,6 +78,10 @@ class RoomDiscountController extends Controller
         // Validate
         $validated = $request->validate(RoomDiscountRules::rules());
 
+        // Security: authorize on the target room
+        $room = Room::findOrFail($validated['room_id']);
+        $this->authorize('manageDiscounts', $room);
+
         // Create discount
         RoomDiscount::create($validated);
 
@@ -104,20 +94,15 @@ class RoomDiscountController extends Controller
      */
     public function edit(RoomDiscount $roomDiscount): View
     {
+        $this->authorize('manageDiscounts', $roomDiscount->room);
+
         $user = auth()->user();
+        $roomIds = $user->getAccessibleRoomIds(UserRole::ADMIN);
 
-        // Check if user has admin rights for this discount's room's owner
-        if (! $user->isAdminOf($roomDiscount->room->owner)) {
-            abort(403, __('You do not have administration rights for this discount.'));
-        }
-
-        // Get rooms where user has admin rights
-        if ($user->is_global_admin) {
-            $rooms = Room::with('owner.contact')->orderBy('name', 'asc')->get();
-        } else {
-            $ownerIds = $user->owners()->wherePivot('role', 'admin')->pluck('owners.id');
-            $rooms = Room::with('owner.contact')->whereIn('owner_id', $ownerIds)->orderBy('name', 'asc')->get();
-        }
+        $rooms = Room::with('owner.contact')
+            ->whereIn('id', $roomIds)
+            ->orderBy('name', 'asc')
+            ->get();
 
         return view('room-discounts.form', [
             'discount' => $roomDiscount,
@@ -130,16 +115,15 @@ class RoomDiscountController extends Controller
      */
     public function update(Request $request, RoomDiscount $roomDiscount): RedirectResponse
     {
-        $user = auth()->user();
+        $this->authorize('manageDiscounts', $roomDiscount->room);
 
         // Validate
         $validated = $request->validate(RoomDiscountRules::rules($roomDiscount->id));
 
-        // Check if user has admin rights for the selected room's owner (in case it changed)
-        $room = Room::with('owner')->findOrFail($validated['room_id']);
-        if (! $user->is_global_admin && ! $user->isAdminOf($room->owner)) {
-            return redirect()->route('room-discounts.index')
-                ->with('error', __('You do not have administration rights for the new owner.'));
+        // If room changed, check authorization on the new room too
+        if ($validated['room_id'] != $roomDiscount->room_id) {
+            $newRoom = Room::findOrFail($validated['room_id']);
+            $this->authorize('manageDiscounts', $newRoom);
         }
 
         // Update discount
@@ -154,13 +138,7 @@ class RoomDiscountController extends Controller
      */
     public function destroy(RoomDiscount $roomDiscount): RedirectResponse
     {
-        $user = auth()->user();
-
-        // Check if user has admin rights for this discount's room's owner
-        if (! $user->isAdminOf($roomDiscount->room->owner)) {
-            return redirect()->route('room-discounts.index')
-                ->with('error', __('You do not have administration rights for this discount.'));
-        }
+        $this->authorize('manageDiscounts', $roomDiscount->room);
 
         $roomDiscount->delete();
 

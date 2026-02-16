@@ -152,31 +152,6 @@ class Room extends Model
             ->withTimestamps();
     }
 
-    /**
-     * Check if the room is accessible by the given user.
-     * Public rooms are accessible by everyone.
-     * Private rooms require: global_admin, owner role, or direct room access.
-     */
-    public function isAccessibleBy(?User $user): bool
-    {
-        if ($this->is_public) {
-            return true;
-        }
-        if (! $user) {
-            return false;
-        }
-        if ($user->is_global_admin) {
-            return true;
-        }
-        // Check if user has any role on the owner
-        if ($user->owners()->where('owners.id', $this->owner_id)->exists()) {
-            return true;
-        }
-
-        // Check if user has direct access to this room
-        return $this->users()->where('users.id', $user->id)->exists();
-    }
-
     public function shortPriceRuleLabel()
     {
         if (! $this->price_short || ! $this->max_hours_short) {

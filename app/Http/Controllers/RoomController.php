@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CalendarViewModes;
-use App\Enums\OwnerUserRoles;
 use App\Enums\ReservationStatus;
 use App\Enums\RoomCurrentStatus;
+use App\Enums\UserRole;
 use App\Models\Image;
 use App\Models\Owner;
 use App\Models\Room;
@@ -41,13 +41,14 @@ class RoomController extends Controller
         }
 
         if ($view === 'mine') {
-            // "mine" view: rooms from owners where user has moderator+ role
-            $manageableOwnerIds = $user->getOwnerIdsWithMinRole(OwnerUserRoles::MODERATOR);
+            // "mine" view: rooms where user has moderator+ effective role (global admins see all via model method)
+            $manageableRoomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
 
             $query = Room::with(['owner.contact', 'discounts', 'options', 'images'])
-                ->whereIn('owner_id', $manageableOwnerIds);
+                ->whereIn('id', $manageableRoomIds);
 
-            // Owners for filter: only those with moderator+ role
+            // Owners for filter: those with rooms in the manageable set
+            $manageableOwnerIds = Room::whereIn('id', $manageableRoomIds)->pluck('owner_id')->unique();
             $owners = Owner::with('contact')->whereIn('id', $manageableOwnerIds)->get();
         } else {
             // "available" view: all rooms accessible to the user (public + private with access)
@@ -118,12 +119,8 @@ class RoomController extends Controller
         $user = auth()->user();
 
         // Get owners where user has admin rights
-        if ($user->is_global_admin) {
-            $owners = Owner::with('contact')->get();
-        } else {
-            $ownerIds = $user->owners()->wherePivot('role', OwnerUserRoles::ADMIN->value)->pluck('owners.id');
-            $owners = Owner::with('contact')->whereIn('id', $ownerIds)->get();
-        }
+        $ownerIds = $user->getOwnerIdsWithMinUserRole(UserRole::ADMIN);
+        $owners = Owner::with('contact')->whereIn('id', $ownerIds)->get();
 
         // Get owner timezones for JavaScript
         $ownerTimezones = $owners->mapWithKeys(function ($owner) {
@@ -190,9 +187,8 @@ class RoomController extends Controller
         $room->load(['owner.contact', 'discounts', 'options', 'customFields', 'images']);
 
         $user = auth()->user();
-        $isAdmin = $user && $user->isAdminOf($room->owner);
 
-        return view('rooms.show', compact('room', 'user', 'isAdmin'));
+        return view('rooms.show', compact('room', 'user'));
     }
 
     /**
@@ -200,10 +196,7 @@ class RoomController extends Controller
      */
     public function available(Room $room, AvailabilityService $availabilityService): View
     {
-        // Check access
-        if (! $room->isAccessibleBy(auth()->user())) {
-            abort(403);
-        }
+        $this->authorize('view', $room);
 
         $room->load(['owner.contact', 'unavailabilities']);
         $timezone = $room->getTimezone();
@@ -485,12 +478,8 @@ class RoomController extends Controller
         $user = auth()->user();
 
         // Get owners where user has admin rights
-        if ($user->is_global_admin) {
-            $owners = Owner::with('contact')->get();
-        } else {
-            $ownerIds = $user->owners()->wherePivot('role', OwnerUserRoles::ADMIN->value)->pluck('owners.id');
-            $owners = Owner::with('contact')->whereIn('id', $ownerIds)->get();
-        }
+        $ownerIds = $user->getOwnerIdsWithMinUserRole(UserRole::ADMIN);
+        $owners = Owner::with('contact')->whereIn('id', $ownerIds)->get();
 
         // Get owner timezones for JavaScript
         $ownerTimezones = $owners->mapWithKeys(function ($owner) {

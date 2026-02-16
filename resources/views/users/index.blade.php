@@ -102,11 +102,11 @@
                                     <div class="mt-1 space-y-1">
                                         @foreach($user->owners as $owner)
                                             @php
-                                                $ownerRole = \App\Enums\OwnerUserRoles::tryFrom($owner->pivot->role);
+                                                $ownerRole = \App\Enums\UserRole::tryFrom($owner->pivot->role);
                                                 $badgeColor = match($ownerRole) {
-                                                    \App\Enums\OwnerUserRoles::ADMIN => 'bg-red-100 text-red-800',
-                                                    \App\Enums\OwnerUserRoles::MODERATOR => 'bg-yellow-100 text-yellow-800',
-                                                    \App\Enums\OwnerUserRoles::VIEWER => 'bg-blue-100 text-blue-800',
+                                                    \App\Enums\UserRole::ADMIN => 'bg-red-100 text-red-800',
+                                                    \App\Enums\UserRole::MODERATOR => 'bg-yellow-100 text-yellow-800',
+                                                    \App\Enums\UserRole::VIEWER => 'bg-blue-100 text-blue-800',
                                                     default => 'bg-gray-100 text-gray-800',
                                                 };
                                             @endphp

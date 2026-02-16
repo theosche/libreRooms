@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
-use App\Enums\OwnerUserRoles;
-use App\Enums\RoomUserRoles;
+use App\Enums\UserRole;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -79,10 +79,12 @@ class User extends Authenticatable implements MustVerifyEmail
             ->withTimestamps();
     }
 
+    // ─── New unified role methods (UserRole) ────────────────────────────
+
     /**
      * Get the user's role for a specific owner.
      */
-    public function getRoleForOwner(Owner $owner): ?OwnerUserRoles
+    public function getOwnerRole(Owner $owner): ?UserRole
     {
         $pivot = $this->owners()
             ->where('owners.id', $owner->id)
@@ -93,13 +95,13 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        return OwnerUserRoles::tryFrom($pivot->role);
+        return UserRole::tryFrom($pivot->role);
     }
 
     /**
      * Get the user's direct role for a specific room.
      */
-    public function getRoleForRoom(Room $room): ?RoomUserRoles
+    public function getDirectRoomRole(Room $room): ?UserRole
     {
         $pivot = $this->rooms()
             ->where('rooms.id', $room->id)
@@ -110,108 +112,167 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        return RoomUserRoles::tryFrom($pivot->role);
+        return UserRole::tryFrom($pivot->role);
     }
 
     /**
-     * Check if user has at least the given role on an owner.
+     * Get the effective role for a room (max of owner role and direct room role).
      */
-    public function hasOwnerRole(Owner $owner, OwnerUserRoles $minRole): bool
+    public function getEffectiveRoomRole(Room $room): ?UserRole
     {
-        if ($this->is_global_admin) {
-            return true;
+        $ownerRole = $this->getOwnerRole($room->owner);
+        $directRole = $this->getDirectRoomRole($room);
+
+        if ($ownerRole === null && $directRole === null) {
+            return null;
         }
 
-        $role = $this->getRoleForOwner($owner);
+        if ($ownerRole === null) {
+            return $directRole;
+        }
 
-        return $role !== null && $role->hasAtLeast($minRole);
+        if ($directRole === null) {
+            return $ownerRole;
+        }
+
+        return $ownerRole->hasAtLeast($directRole) ? $ownerRole : $directRole;
     }
 
-    /**
-     * Check if user is admin of a specific owner.
-     */
-    public function isAdminOf(Owner $owner): bool
+    public function canAdminOwner(Owner $owner): bool
     {
-        return $this->hasOwnerRole($owner, OwnerUserRoles::ADMIN);
+        $role = $this->getOwnerRole($owner);
+
+        return $role !== null && $role->hasAtLeast(UserRole::ADMIN);
     }
 
-    public function canManageOwner(Owner $owner): bool
+    public function canModerateOwner(Owner $owner): bool
     {
-        return $this->hasOwnerRole($owner, OwnerUserRoles::MODERATOR);
+        $role = $this->getOwnerRole($owner);
+
+        return $role !== null && $role->hasAtLeast(UserRole::MODERATOR);
     }
 
     public function canViewOwner(Owner $owner): bool
     {
-        return $this->hasOwnerRole($owner, OwnerUserRoles::VIEWER);
+        $role = $this->getOwnerRole($owner);
+
+        return $role !== null && $role->hasAtLeast(UserRole::VIEWER);
     }
 
-    /**
-     * Check if user can manage reservations for a room (moderator or admin of owner).
-     */
-    public function canManageReservationsFor(Room $room): bool
+    public function canViewRoom(Room $room): bool
     {
-        return $this->hasOwnerRole($room->owner, OwnerUserRoles::MODERATOR);
+        $role = $this->getEffectiveRoomRole($room);
+
+        return $role !== null && $role->hasAtLeast(UserRole::VIEWER);
     }
 
-    /**
-     * Check if user has admin rights for a reservation.
-     */
-    public function hasAdminRightsFor(Reservation $reservation): bool
+    public function canModerateRoom(Room $room): bool
     {
-        return $this->isAdminOf($reservation->room->owner);
+        $role = $this->getEffectiveRoomRole($room);
+
+        return $role !== null && $role->hasAtLeast(UserRole::MODERATOR);
+    }
+
+    public function canAdminRoom(Room $room): bool
+    {
+        $role = $this->getEffectiveRoomRole($room);
+
+        return $role !== null && $role->hasAtLeast(UserRole::ADMIN);
+    }
+
+    public function canAdminAnyOwner(): bool
+    {
+        return $this->owners()->wherePivot('role', UserRole::ADMIN->value)->exists();
+    }
+
+    public function canModerateAnyOwner(): bool
+    {
+        return $this->owners()
+            ->wherePivotIn('role', [UserRole::ADMIN->value, UserRole::MODERATOR->value])
+            ->exists();
+    }
+
+    public function canAdminAnyRoom(): bool
+    {
+        // Admin on any owner OR admin direct on any room
+        return $this->canAdminAnyOwner()
+            || $this->rooms()->wherePivot('role', UserRole::ADMIN->value)->exists();
+    }
+
+    public function canModerateAnyRoom(): bool
+    {
+        // Moderator+ on any owner OR moderator+ direct on any room
+        return $this->canModerateAnyOwner()
+            || $this->rooms()->wherePivotIn('role', [UserRole::ADMIN->value, UserRole::MODERATOR->value])->exists();
     }
 
     /**
      * Get owner IDs where user has at least the given role.
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
-    public function getOwnerIdsWithMinRole(OwnerUserRoles $minRole): \Illuminate\Support\Collection
+    public function getOwnerIdsWithMinUserRole(UserRole $minRole): Collection
     {
         if ($this->is_global_admin) {
             return Owner::pluck('id');
         }
 
+        $roles = collect(UserRole::cases())
+            ->filter(fn (UserRole $r) => $r->hasAtLeast($minRole))
+            ->map(fn (UserRole $r) => $r->value)
+            ->values()
+            ->all();
+
         return $this->owners()
-            ->get()
-            ->filter(fn ($owner) => OwnerUserRoles::tryFrom($owner->pivot->role)?->hasAtLeast($minRole))
-            ->pluck('id');
+            ->wherePivotIn('role', $roles)
+            ->pluck('owners.id');
+    }
+
+    /**
+     * Get room IDs where user has at least the given direct role.
+     *
+     * @return Collection<int, int>
+     */
+    public function getRoomIdsWithMinDirectRole(UserRole $minRole): Collection
+    {
+        $roles = collect(UserRole::cases())
+            ->filter(fn (UserRole $r) => $r->hasAtLeast($minRole))
+            ->map(fn (UserRole $r) => $r->value)
+            ->values()
+            ->all();
+
+        return $this->rooms()
+            ->wherePivotIn('role', $roles)
+            ->pluck('rooms.id');
+    }
+
+    /**
+     * Get all room IDs where user has at least the given effective role
+     * (via owner role OR direct room role).
+     *
+     * @return Collection<int, int>
+     */
+    public function getAccessibleRoomIds(UserRole $minRole): Collection
+    {
+        if ($this->is_global_admin) {
+            return Room::pluck('id');
+        }
+
+        $ownerIds = $this->getOwnerIdsWithMinUserRole($minRole);
+        $roomIdsFromOwners = Room::whereIn('owner_id', $ownerIds)->pluck('id');
+        $directRoomIds = $this->getRoomIdsWithMinDirectRole($minRole);
+
+        return $roomIdsFromOwners->merge($directRoomIds)->unique()->values();
     }
 
     /**
      * Get owner IDs where user has any role.
      *
-     * @return \Illuminate\Support\Collection<int, int>
+     * @return Collection<int, int>
      */
-    public function getOwnerIdsWithAnyRole(): \Illuminate\Support\Collection
+    public function getOwnerIdsWithAnyRole(): Collection
     {
-        if ($this->is_global_admin) {
-            return Owner::pluck('id');
-        }
-
         return $this->owners()->pluck('owners.id');
-    }
-
-    /**
-     * Check if user can manage at least one owner (has moderator+ role).
-     */
-    public function canManageAnyOwner(): bool
-    {
-        if ($this->is_global_admin) {
-            return true;
-        }
-
-        return $this->owners
-            ->contains(fn ($owner) => OwnerUserRoles::tryFrom($owner->pivot->role)?->hasAtLeast(OwnerUserRoles::MODERATOR));
-    }
-
-    public function canAdminAnyOwner(): bool
-    {
-        if ($this->is_global_admin) {
-            return true;
-        }
-
-        return $this->owners()->wherePivot('role', 'admin')->exists();
     }
 
     public function canAccessContact(Contact $contact): bool

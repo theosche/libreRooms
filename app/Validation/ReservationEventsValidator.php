@@ -30,7 +30,7 @@ class ReservationEventsValidator
         $availability->loadBusySlots($room);
 
         // Determine if user is admin (bypass for PAST, TOO_CLOSE, TOO_FAR, NON_BOOKABLE)
-        $canManage = $user?->canManageReservationsFor($room);
+        $canManage = $user?->can('manageReservations', $room);
 
         // Load unavailabilities once for all events
         $unavailabilities = $room->unavailabilities;

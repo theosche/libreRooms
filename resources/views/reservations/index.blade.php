@@ -101,7 +101,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 @forelse($reservations as $reservation)
                     @php
-                        $canManage = $user->canManageReservationsFor($reservation->room);
+                        $canManage = $user->can('manageReservations', $reservation->room);
                         $isPending = $reservation->status === \App\Enums\ReservationStatus::PENDING;
                         $isConfirmed = $reservation->status === \App\Enums\ReservationStatus::CONFIRMED;
                         $isCancelled = $reservation->status === \App\Enums\ReservationStatus::CANCELLED;

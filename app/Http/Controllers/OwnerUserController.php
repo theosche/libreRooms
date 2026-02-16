@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\OwnerUserRoles;
+use App\Enums\UserRole;
 use App\Models\Owner;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -23,8 +23,7 @@ class OwnerUserController extends Controller
 
         return view('owners.users.index', [
             'owner' => $owner,
-            'roles' => OwnerUserRoles::cases(),
-            'isAdmin' => $currentUser->isAdminOf($owner),
+            'roles' => UserRole::cases(),
             'currentUser' => $currentUser,
         ]);
     }
@@ -38,7 +37,7 @@ class OwnerUserController extends Controller
 
         $validated = $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
-            'role' => ['required', 'string', 'in:' . implode(',', array_column(OwnerUserRoles::cases(), 'value'))],
+            'role' => ['required', 'string', 'in:'.implode(',', array_column(UserRole::cases(), 'value'))],
         ], [
             'email.exists' => __('No user found with this email.'),
         ]);
@@ -47,27 +46,12 @@ class OwnerUserController extends Controller
         $this->authorize('addOwnerUser', [$owner, $validated['role']]);
 
         $user = User::where('email', $validated['email'])->first();
-        $currentUser = auth()->user();
-
-        // Check if it's the current user
-        if ($user->id === $currentUser->id) {
-            return redirect()->route('owners.users.index', $owner)
-                ->with('error', __('You cannot modify your own role.'));
-        }
 
         // Check if user already has access
-        $existingRole = $user->getRoleForOwner($owner);
+        $existingRole = $user->getOwnerRole($owner);
         if ($existingRole !== null) {
-            // User exists - update role if allowed
-            $newRole = OwnerUserRoles::from($validated['role']);
-
-            // Moderators can't overwrite a higher role with viewer
-            if (! $currentUser->isAdminOf($owner)) {
-                if ($existingRole->hasAtLeast(OwnerUserRoles::MODERATOR) && $newRole === OwnerUserRoles::VIEWER) {
-                    return redirect()->route('owners.users.index', $owner)
-                        ->with('error', __('You cannot demote a moderator or admin to viewer.'));
-                }
-            }
+            // Check if current user can modify this target user's role (via policy)
+            $this->authorize('removeOwnerUser', [$owner, $user]);
 
             // Update the role
             $user->owners()->updateExistingPivot($owner->id, ['role' => $validated['role']]);

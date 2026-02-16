@@ -40,8 +40,8 @@
                     @php
                         // Filter to show only admins and moderators (not viewers)
                         $adminsAndModerators = $owner->users->filter(function ($u) {
-                            $role = \App\Enums\OwnerUserRoles::tryFrom($u->pivot->role);
-                            return $role && $role->hasAtLeast(\App\Enums\OwnerUserRoles::MODERATOR);
+                            $role = \App\Enums\UserRole::tryFrom($u->pivot->role);
+                            return $role && $role->hasAtLeast(\App\Enums\UserRole::MODERATOR);
                         });
                         $otherAdminsAndMods = $adminsAndModerators->where('id', '!=', $user->id);
                     @endphp
@@ -84,10 +84,10 @@
                                 <div class="flex flex-wrap gap-1">
                                     @foreach($otherAdminsAndMods as $adminMod)
                                         @php
-                                            $role = \App\Enums\OwnerUserRoles::tryFrom($adminMod->pivot->role);
+                                            $role = \App\Enums\UserRole::tryFrom($adminMod->pivot->role);
                                             $badgeColor = match($role) {
-                                                \App\Enums\OwnerUserRoles::ADMIN => 'bg-red-100 text-red-700',
-                                                \App\Enums\OwnerUserRoles::MODERATOR => 'bg-yellow-100 text-yellow-700',
+                                                \App\Enums\UserRole::ADMIN => 'bg-red-100 text-red-700',
+                                                \App\Enums\UserRole::MODERATOR => 'bg-yellow-100 text-yellow-700',
                                                 default => 'bg-gray-100 text-gray-700',
                                             };
                                         @endphp
@@ -101,7 +101,7 @@
                                                 {{ $adminMod->name }}
                                             </span>
                                         @endif
-                                        {!! $role === \App\Enums\OwnerUserRoles::ADMIN ? '<i class="fas fa-user-lock text-sm mt-1 ml-1 mr-2"></i>' : '' !!}
+                                        {!! $role === \App\Enums\UserRole::ADMIN ? '<i class="fas fa-user-lock text-sm mt-1 ml-1 mr-2"></i>' : '' !!}
                                         </div>
                                     @endforeach
                                 </div>

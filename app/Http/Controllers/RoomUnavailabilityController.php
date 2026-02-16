@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Owner;
+use App\Enums\UserRole;
 use App\Models\Room;
 use App\Models\RoomUnavailability;
 use App\Support\DateHelper;
 use App\Validation\RoomUnavailabilityRules;
-use App\Enums\OwnerUserRoles;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -19,19 +18,14 @@ class RoomUnavailabilityController extends Controller
      */
     public function index(Request $request): View
     {
+        $this->authorize('viewAnyUnavailabilities', Room::class);
+
         $user = auth()->user();
-
-        if (! $user?->canManageAnyOwner()) {
-            abort(403, __('You must have moderation rights for at least one owner to access this page.'));
-        }
-
-        $ownerIds = $user->getOwnerIdsWithMinRole(OwnerUserRoles::MODERATOR);
+        $roomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
 
         // Build query
         $query = RoomUnavailability::with(['room.owner.contact'])
-            ->whereHas('room', function ($q) use ($ownerIds) {
-                $q->whereIn('owner_id', $ownerIds);
-            });
+            ->whereIn('room_id', $roomIds);
 
         // Filter by room
         $currentRoomId = $request->input('room_id');
@@ -44,7 +38,7 @@ class RoomUnavailabilityController extends Controller
 
         // Get available rooms for filters
         $rooms = Room::with('owner.contact')
-            ->whereIn('owner_id', $ownerIds)
+            ->whereIn('id', $roomIds)
             ->orderBy('name', 'asc')
             ->get();
 
@@ -60,19 +54,15 @@ class RoomUnavailabilityController extends Controller
      */
     public function create(Request $request): View
     {
+        $this->authorize('viewAnyUnavailabilities', Room::class);
+
         $user = auth()->user();
+        $roomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
 
-        if (! $user?->canManageAnyOwner()) {
-            abort(403, __('You must have moderation rights for at least one owner to create an unavailability.'));
-        }
-
-        // Get rooms where user has admin rights
-        if ($user->is_global_admin) {
-            $rooms = Room::with('owner.contact')->orderBy('name', 'asc')->get();
-        } else {
-            $ownerIds = $user->getOwnerIdsWithMinRole(OwnerUserRoles::MODERATOR);
-            $rooms = Room::with('owner.contact')->whereIn('owner_id', $ownerIds)->orderBy('name', 'asc')->get();
-        }
+        $rooms = Room::with('owner.contact')
+            ->whereIn('id', $roomIds)
+            ->orderBy('name', 'asc')
+            ->get();
 
         return view('room-unavailabilities.form', [
             'unavailability' => null,
@@ -86,11 +76,17 @@ class RoomUnavailabilityController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        // Validate (persmission check in validate)
+        // Validate
         $validated = $request->validate(RoomUnavailabilityRules::rules());
-        $timezone = Room::find($validated['room_id'])->getTimezone();
+
+        // Security: authorize on the target room
+        $room = Room::findOrFail($validated['room_id']);
+        $this->authorize('manageUnavailabilities', $room);
+
+        $timezone = $room->getTimezone();
         $validated['start'] = DateHelper::fromLocalInput($validated['start'], $timezone);
         $validated['end'] = DateHelper::fromLocalInput($validated['end'], $timezone);
+
         // Create unavailability
         RoomUnavailability::create($validated);
 
@@ -103,19 +99,15 @@ class RoomUnavailabilityController extends Controller
      */
     public function edit(RoomUnavailability $roomUnavailability): View
     {
+        $this->authorize('manageUnavailabilities', $roomUnavailability->room);
+
         $user = auth()->user();
+        $roomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
 
-        if (! $user->canManageOwner($roomUnavailability->room->owner)) {
-            abort(403, __('You do not have moderation rights for this unavailability.'));
-        }
-
-        // Get rooms where user has admin rights
-        if ($user->is_global_admin) {
-            $rooms = Room::with('owner.contact')->orderBy('name', 'asc')->get();
-        } else {
-            $ownerIds = $user->getOwnerIdsWithMinRole(OwnerUserRoles::MODERATOR);
-            $rooms = Room::with('owner.contact')->whereIn('owner_id', $ownerIds)->orderBy('name', 'asc')->get();
-        }
+        $rooms = Room::with('owner.contact')
+            ->whereIn('id', $roomIds)
+            ->orderBy('name', 'asc')
+            ->get();
 
         return view('room-unavailabilities.form', [
             'unavailability' => $roomUnavailability,
@@ -128,7 +120,8 @@ class RoomUnavailabilityController extends Controller
      */
     public function update(Request $request, RoomUnavailability $roomUnavailability): RedirectResponse
     {
-        $user = auth()->user();
+        // Security: authorize on the current room
+        $this->authorize('manageUnavailabilities', $roomUnavailability->room);
 
         // Validate
         $validated = $request->validate(RoomUnavailabilityRules::rules());
@@ -148,13 +141,7 @@ class RoomUnavailabilityController extends Controller
      */
     public function destroy(RoomUnavailability $roomUnavailability): RedirectResponse
     {
-        $user = auth()->user();
-
-        // Check if user has admin rights for this unavailability's room's owner
-        if (! $user->canManageOwner($roomUnavailability->room->owner)) {
-            return redirect()->route('room-unavailabilities.index')
-                ->with('error', __('You do not have moderation rights for this unavailability.'));
-        }
+        $this->authorize('manageUnavailabilities', $roomUnavailability->room);
 
         $roomUnavailability->delete();
 

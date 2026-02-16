@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\OwnerUserRoles;
 use App\Enums\ReservationStatus;
+use App\Enums\UserRole;
 use App\Http\Requests\StoreReservationRequest;
 use App\Http\Requests\UpdateReservationRequest;
 use App\Models\Contact;
@@ -148,22 +148,15 @@ class ReservationController extends Controller
         $view = $request->input('view', 'mine'); // 'mine' or 'admin'
 
         // Check if user can access admin view (moderator or admin role)
-        $canViewAdmin = $user->canManageAnyOwner();
+        $canViewAdmin = $user->can('viewMine', Room::class);
 
         if ($view === 'admin' && ! $canViewAdmin) {
             $view = 'mine';
         }
 
         if ($view === 'admin') {
-            // Get all room IDs where user has moderator or admin rights
-            if ($user->is_global_admin) {
-                $roomIds = Room::pluck('id');
-            } else {
-                $ownerIds = $user->owners()
-                    ->wherePivotIn('role', [OwnerUserRoles::ADMIN->value, OwnerUserRoles::MODERATOR->value])
-                    ->pluck('owners.id');
-                $roomIds = Room::whereIn('owner_id', $ownerIds)->pluck('id');
-            }
+            // Get all room IDs where user has moderator or admin rights (global admins see all via model method)
+            $roomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
 
             // Build query with filters
             $query = Reservation::with([
@@ -293,7 +286,7 @@ class ReservationController extends Controller
             $canCancel = true;
         } elseif ($reservation->status === ReservationStatus::CONFIRMED) {
             // Moderators and admins can cancel confirmed reservations
-            $canCancel = $user->canManageReservationsFor($reservation->room);
+            $canCancel = $user->can('manageReservations', $reservation->room);
         } else {
             $canCancel = false;
         }
@@ -314,15 +307,5 @@ class ReservationController extends Controller
         }
 
         return redirect()->route('reservations.index')->with('success', __('Reservation cancelled successfully.'));
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Reservation $reservation)
-    {
-        $reservation->delete();
-
-        return response()->json(null, 204);
     }
 }

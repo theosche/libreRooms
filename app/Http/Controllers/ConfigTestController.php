@@ -16,6 +16,7 @@ class ConfigTestController extends Controller
      */
     public function testMail(Request $request): JsonResponse
     {
+        $this->authorizeConfigTest($request);
 
         $host = $request->input('mail_host');
         $port = (int) $request->input('mail_port');
@@ -63,6 +64,8 @@ class ConfigTestController extends Controller
      */
     public function testCaldav(Request $request): JsonResponse
     {
+        $this->authorizeConfigTest($request);
+
         $url = $request->input('dav_url');
         $user = $request->input('dav_user');
         $pass = $request->input('dav_pass');
@@ -109,6 +112,8 @@ class ConfigTestController extends Controller
      */
     public function testWebdav(Request $request): JsonResponse
     {
+        $this->authorizeConfigTest($request);
+
         $endpoint = $request->input('webdav_endpoint');
         $user = $request->input('webdav_user');
         $pass = $request->input('webdav_pass');
@@ -158,7 +163,7 @@ class ConfigTestController extends Controller
             if ($error) {
                 return response()->json([
                     'success' => false,
-                    'message' => __('Connection failed') . ' : '.$error,
+                    'message' => __('Connection failed').' : '.$error,
                 ]);
             }
 
@@ -186,6 +191,19 @@ class ConfigTestController extends Controller
                 'success' => false,
                 'message' => __('Connection failed').' : '.$this->sanitizeErrorMessage($e->getMessage()),
             ]);
+        }
+    }
+
+    /**
+     * Authorize the config test request.
+     * Owner tests require admin rights on the owner.
+     * System tests require global admin (handled by Gate::before on the settings page).
+     */
+    private function authorizeConfigTest(Request $request): void
+    {
+        if ($request->input('entity_type') === 'owner' && $request->input('entity_id')) {
+            $owner = Owner::findOrFail($request->input('entity_id'));
+            $this->authorize('update', $owner);
         }
     }
 

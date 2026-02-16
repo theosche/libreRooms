@@ -6,13 +6,13 @@
 <div class="max-w-7xl mx-auto py-6">
     <div class="page-header">
         <h1 class="page-header-title">{{ $room->name }}</h1>
-        @if ($user?->isAdminOf($room->owner))
+        @can('update', $room->owner)
             <a href="{{ route('owners.edit', $room->owner) }}">
                 <p class="mt-2 text-sm text-gray-600">{{ $room->owner->contact->display_name() }}</p>
             </a>
         @else
             <p class="mt-2 text-sm text-gray-600">{{ $room->owner->contact->display_name() }}</p>
-        @endif
+        @endcan
         <nav class="page-submenu">
             <a href="{{ route('rooms.index') }}"
                class="page-submenu-item page-submenu-nav">
@@ -96,7 +96,7 @@
             <!-- Calendar -->
             <div class="bg-white rounded-lg shadow p-6">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Calendar') }}</h2>
-                @if($isAdmin)
+                @can('manageReservations', $room)
                     <p class="text-sm text-green-600 font-medium mb-4">{{ __('Administrator mode - You see all information') }}</p>
                 @else
                     <p class="text-sm text-gray-500 mb-4">
@@ -112,12 +112,12 @@
                                 @break
                         @endswitch
                     </p>
-                @endif
+                @endcan
                 @include('rooms._calendar', ['room' => $room])
             </div>
 
             <!-- Admin actions -->
-            @if($isAdmin)
+            @can('update', $room)
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-yellow-800 mb-4">{{ __('Administration') }}</h3>
                     <div class="space-y-2">
@@ -129,7 +129,7 @@
                         </a>
                     </div>
                 </div>
-            @endif
+            @endcan
         </div>
 
         <!-- Sidebar -->
@@ -185,13 +185,13 @@
                             @foreach($room->discounts->where('active', true) as $discount)
                                 <div class="flex items-center justify-between text-sm">
                                     <span class="text-gray-600">
-                                        @if($isAdmin)
+                                        @can('manageDiscounts', $room)
                                             <a href="{{ route('room-discounts.edit', $discount) }}">
                                                 {{ $discount->name }}
                                             </a>
                                         @else
                                             {{ $discount->name }}
-                                        @endif
+                                        @endcan
                                         @if($discount->limit_to_contact_type)
                                             <span class="text-gray-400 text-xs">({{ $discount->limit_to_contact_type->value === 'individual' ? __('Individual') : __('Org.') }})</span>
                                         @endif
@@ -236,13 +236,13 @@
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Owner') }}</h3>
                 <div class="space-y-3">
-                    @if ($user?->isAdminOf($room->owner))
+                    @can('update', $room->owner)
                         <a href="{{ route('owners.edit', $room->owner) }}">
                             <p class="text-sm font-medium mb-2 text-gray-900">{{ $room->owner->contact->display_name() }}</p>
                         </a>
                     @else
                         <p class="text-sm font-medium mb-2 text-gray-900">{{ $room->owner->contact->display_name() }}</p>
-                    @endif
+                    @endcan
 
                     @if($room->owner->contact->email && !$room->owner->hide_email)
                         <a href="mailto:{{ $room->owner->contact->email }}" class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
@@ -277,9 +277,9 @@
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Options') }}</h3>
                     <div class="space-y-3">
                         @foreach($room->options->where('active', true) as $option)
-                            @if($isAdmin)
+                            @can('manageOptions', $room)
                                 <a href="{{ route('room-options.edit', $option) }}">
-                            @endif
+                            @endcan
                             <div class="border border-gray-200 rounded-lg p-3">
                                 <div class="flex justify-between items-start">
                                     <span class="text-sm font-medium text-gray-900">{{ $option->name }}</span>
@@ -289,9 +289,9 @@
                                     <p class="text-xs text-gray-500 mt-1">{{ $option->description }}</p>
                                 @endif
                             </div>
-                            @if($isAdmin)
+                            @can('manageOptions', $room)
                                 </a>
-                            @endif
+                            @endcan
                         @endforeach
                     </div>
                 </div>

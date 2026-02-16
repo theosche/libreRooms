@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\InvoiceStatus;
-use App\Enums\OwnerUserRoles;
+use App\Enums\UserRole;
 use App\Models\Contact;
 use App\Models\Invoice;
+use App\Models\Room;
 use App\Services\Mailer\MailService;
 use App\Services\Reservation\PDFService;
 use App\Services\Webdav\WebdavUploader;
@@ -20,6 +21,7 @@ class InvoiceController extends Controller
     public function __construct(
         private MailService $mail,
     ) {}
+
     /**
      * Display a listing of invoices.
      */
@@ -29,40 +31,32 @@ class InvoiceController extends Controller
         $view = $request->input('view', 'mine'); // 'mine' or 'admin'
 
         // Check if user can access admin view (moderator or admin role)
-        $canViewAdmin = $user->is_global_admin ||
-            $user->owners()
-                ->wherePivotIn('role', [OwnerUserRoles::ADMIN->value, OwnerUserRoles::MODERATOR->value])
-                ->exists();
+        $canViewAdmin = $user->can('viewMine', Room::class);
 
         if ($view === 'admin' && ! $canViewAdmin) {
             $view = 'mine';
         }
 
         if ($view === 'admin') {
-            // Get all owner IDs where user has moderator or admin rights
-            if ($user->is_global_admin) {
-                $ownerIds = \App\Models\Owner::pluck('id');
-            } else {
-                $ownerIds = $user->owners()
-                    ->wherePivotIn('role', [OwnerUserRoles::ADMIN->value, OwnerUserRoles::MODERATOR->value])
-                    ->pluck('owners.id');
-            }
+            // Get all room IDs where user has moderator or admin rights (via owner role or direct room role)
+            $roomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
 
-            // Build query
+            // Build query - invoices for reservations on accessible rooms
             $query = Invoice::with([
                 'reservation.room',
                 'reservation.tenant',
                 'owner',
             ])
-                ->whereIn('owner_id', $ownerIds)
+                ->whereHas('reservation', function ($q) use ($roomIds) {
+                    $q->whereIn('room_id', $roomIds);
+                })
                 ->orderBy('created_at', 'desc');
 
             // Get contacts for filter dropdown
-            $contacts = Contact::whereIn('id', function ($q) use ($ownerIds) {
+            $contacts = Contact::whereIn('id', function ($q) use ($roomIds) {
                 $q->select('tenant_id')
                     ->from('reservations')
-                    ->join('invoices', 'reservations.id', '=', 'invoices.reservation_id')
-                    ->whereIn('invoices.owner_id', $ownerIds)
+                    ->whereIn('room_id', $roomIds)
                     ->distinct();
             })->get();
         } else {
@@ -121,12 +115,12 @@ class InvoiceController extends Controller
     {
         // Check permission
         $user = auth()->user();
-        if (!$user->canManageReservationsFor($invoice->reservation->room)) {
+        if (! $user->can('manageReservations', $invoice->reservation->room)) {
             return back()->with('error', __('You do not have permission to send a reminder.'));
         }
 
         // Check status - must be LATE or TOO_LATE
-        if (!in_array($invoice->computed_status, [InvoiceStatus::LATE, InvoiceStatus::TOO_LATE])) {
+        if (! in_array($invoice->computed_status, [InvoiceStatus::LATE, InvoiceStatus::TOO_LATE])) {
             return back()->with('error', __('Cannot send reminder for this invoice (status: :status).', ['status' => $invoice->computed_status->label()]));
         }
 
@@ -140,7 +134,7 @@ class InvoiceController extends Controller
         ]);
 
         // Send reminder email
-        if (!$invoice->reservation->room->disable_mailer) {
+        if (! $invoice->reservation->room->disable_mailer) {
             $this->mail->sendReminder($invoice);
         }
 
@@ -166,7 +160,7 @@ class InvoiceController extends Controller
     {
         // Check permission
         $user = auth()->user();
-        if (! $user->canManageReservationsFor($invoice->reservation->room)) {
+        if (! $user->can('manageReservations', $invoice->reservation->room)) {
             return back()->with('error', __('You do not have permission to edit this invoice.'));
         }
 
@@ -189,7 +183,7 @@ class InvoiceController extends Controller
     {
         // Check permission
         $user = auth()->user();
-        if (! $user->canManageReservationsFor($invoice->reservation->room)) {
+        if (! $user->can('manageReservations', $invoice->reservation->room)) {
             return back()->with('error', __('You do not have permission to cancel this invoice.'));
         }
 
@@ -203,7 +197,7 @@ class InvoiceController extends Controller
         ]);
 
         // Send cancellation email if requested
-        if ($request->boolean('send_email') && !$invoice->reservation->room->disable_mailer) {
+        if ($request->boolean('send_email') && ! $invoice->reservation->room->disable_mailer) {
             $reason = $request->input('reason', '');
             $this->mail->cancelInvoice($invoice->reservation, $reason);
         }
@@ -228,7 +222,7 @@ class InvoiceController extends Controller
     {
         // Check permission
         $user = auth()->user();
-        if (! $user->canManageReservationsFor($invoice->reservation->room)) {
+        if (! $user->can('manageReservations', $invoice->reservation->room)) {
             return back()->with('error', __('You do not have permission to recreate this invoice.'));
         }
 
@@ -251,7 +245,7 @@ class InvoiceController extends Controller
         ]);
 
         // Send invoice email if requested
-        if ($request->boolean('send_email') && !$invoice->reservation->room->disable_mailer) {
+        if ($request->boolean('send_email') && ! $invoice->reservation->room->disable_mailer) {
             $complement = $request->input('reason', '');
             $this->mail->sendInvoice($invoice->reservation, $complement);
         }
