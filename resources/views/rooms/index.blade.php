@@ -143,26 +143,34 @@
                                     {{ __('More info') }}
                                 </a>
                                 <div class="flex items-center justify-between gap-2">
-                                @can('manageUsers', $room)
-                                    <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
-                                        <x-action-icon action="users" />
+                                    <a href="{{ route('rooms.show', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">
+                                        <x-action-icon action="view" />
                                     </a>
-                                @endcan
+                                    @can('reserve', $room)
+                                        <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
+                                            <x-action-icon action="book" />
+                                        </a>
+                                    @endcan
+                                    @can('manageUsers', $room)
+                                        <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
+                                            <x-action-icon action="users" />
+                                        </a>
+                                    @endcan
 
-                                @can('update', $room)
-                                    <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
-                                        <x-action-icon action="edit" />
-                                    </a>
+                                    @can('update', $room)
+                                        <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                            <x-action-icon action="edit" />
+                                        </a>
 
-                                    <form action="{{ route('rooms.destroy', [$room] + redirect_back_params()) }}" method="POST"
-                                          onsubmit="return confirm('{{ __('Are you sure you want to delete this room? This action cannot be undone.') }}');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="link-danger" title="{{ __('Delete') }}">
-                                            <x-action-icon action="delete" />
-                                        </button>
-                                    </form>
-                                @endcan
+                                        <form action="{{ route('rooms.destroy', [$room] + redirect_back_params()) }}" method="POST"
+                                              onsubmit="return confirm('{{ __('Are you sure you want to delete this room? This action cannot be undone.') }}');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="link-danger" title="{{ __('Delete') }}">
+                                                <x-action-icon action="delete" />
+                                            </button>
+                                        </form>
+                                    @endcan
                                 </div>
                             </div>
                         </div>
@@ -190,11 +198,9 @@
                                 {{ __('Status') }}
                             </th>
                         @endif
-                        @if($user?->can('viewAdmin', App\Models\Room::class))
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                {{ __('Actions') }}
-                            </th>
-                        @endif
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {{ __('Actions') }}
+                        </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -234,32 +240,38 @@
                                     </div>
                                 </td>
                             @endif
-                            @if(auth()->user()?->can('viewAdmin', App\Models\Room::class))
-                                <td class="px-4 py-3 text-sm font-medium">
-                                    <div class="action-group" onclick="event.stopPropagation()">
-                                        @can('manageUsers', $room)
-                                            <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
-                                                <x-action-icon action="users" />
-                                            </a>
-                                        @endcan
+                            <td class="px-4 py-3 text-sm font-medium">
+                                <div class="action-group" onclick="event.stopPropagation()">
+                                    <a href="{{ route('rooms.show', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">
+                                        <x-action-icon action="view" />
+                                    </a>
+                                    @can('reserve', $room)
+                                        <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
+                                            <x-action-icon action="book" />
+                                        </a>
+                                    @endcan
+                                    @can('manageUsers', $room)
+                                        <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
+                                            <x-action-icon action="users" />
+                                        </a>
+                                    @endcan
 
-                                        @can('update', $room)
-                                            <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
-                                                <x-action-icon action="edit" />
-                                            </a>
+                                    @can('update', $room)
+                                        <a href="{{ route('rooms.edit', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                            <x-action-icon action="edit" />
+                                        </a>
 
-                                            <form action="{{ route('rooms.destroy', [$room] + redirect_back_params()) }}" method="POST"
-                                                  onsubmit="return confirm('{{ __('Are you sure you want to delete this room? This action cannot be undone.') }}');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="link-danger" title="{{ __('Delete') }}">
-                                                    <x-action-icon action="delete" />
-                                                </button>
-                                            </form>
-                                        @endcan
-                                    </div>
-                                </td>
-                            @endif
+                                        <form action="{{ route('rooms.destroy', [$room] + redirect_back_params()) }}" method="POST"
+                                              onsubmit="return confirm('{{ __('Are you sure you want to delete this room? This action cannot be undone.') }}');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="link-danger" title="{{ __('Delete') }}">
+                                                <x-action-icon action="delete" />
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </div>
+                            </td>
                         </tr>
 
                         <!-- Détails dépliables -->

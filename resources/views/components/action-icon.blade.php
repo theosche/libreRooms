@@ -16,6 +16,7 @@
         'view' => 'fa-solid fa-eye',
         'reservations' => 'fa-solid fa-list',
         'invoices' => 'fa-solid fa-file-invoice',
+        'book' => 'fa-solid fa-calendar-plus'
     ];
 @endphp
 
