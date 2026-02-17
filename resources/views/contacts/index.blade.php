@@ -138,11 +138,9 @@
                                     <a href="#" class="link-primary" title="{{ __('Share') }}" onclick="event.preventDefault(); showShareModal({{ $contact->id }}, '{{ addslashes($contact->display_name()) }}')">
                                         <x-action-icon action="share" />
                                     </a>
-                                @endif
-                                <a href="{{ route('contacts.edit', [$contact] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
-                                    <x-action-icon action="edit" />
-                                </a>
-                                @if($canManage)
+                                    <a href="{{ route('contacts.edit', [$contact] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}">
+                                        <x-action-icon action="edit" />
+                                    </a>
                                     <form method="POST" action="{{ route('contacts.destroy', [$contact] + redirect_back_params()) }}" class="inline">
                                         @csrf
                                         @method('DELETE')
