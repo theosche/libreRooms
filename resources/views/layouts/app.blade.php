@@ -14,8 +14,8 @@
 <header class="header">
     <nav class="nav @auth nav-authenticated @endauth">
         <a href="/" class="nav-logo">
-            <img src="/images/logo-icon.png" width="50px">
-            <img src="/images/logo-text.png" width="130px">
+            <img src="/images/logo-icon.png" id="logo-icon">
+            <img src="/images/logo-text.png" id="logo-text">
         </a>
 
         @auth
