@@ -112,7 +112,8 @@
                     <tr class="hover:bg-gray-50 cursor-pointer transition" onclick="toggleDetails({{ $reservation->id }})">
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">
                             <a href="{{ route('reservations.show', [$reservation] + redirect_back_params()) }}"
-                               class="link-primary" title="{{ __('View') }}">#{{ $reservation->id }} onclick="event.stopPropagation()
+                               class="link-primary" title="{{ __('View') }}" onclick="event.stopPropagation()">
+                               #{{ $reservation->id }}
                             </a>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-900">
