@@ -116,6 +116,8 @@ class ReservationController extends Controller
             $contacts = $contacts->push($reservation->tenant);
         }
 
+        $contacts = $contacts->sortBy(fn ($c) => $c->display_name())->values();
+
         return view('reservations.create', [
             'room' => $room,
             'contacts' => $contacts,
@@ -196,7 +198,7 @@ class ReservationController extends Controller
                     ->from('reservations')
                     ->whereIn('room_id', $roomIds)
                     ->distinct();
-            })->get();
+            })->get()->sortBy(fn ($c) => $c->display_name())->values();
         } else {
             // Get all contact IDs for the logged-in user
             $contactIds = $user->contacts()->pluck('contacts.id');
@@ -217,7 +219,7 @@ class ReservationController extends Controller
                 $q->whereIn('tenant_id', $contactIds);
             })->get();
 
-            $contacts = $user->contacts;
+            $contacts = $user->contacts->sortBy(fn ($c) => $c->display_name())->values();
         }
 
         // Apply filters

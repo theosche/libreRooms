@@ -52,47 +52,24 @@ class RoomController extends Controller
 
             // Owners for filter: those with rooms in the manageable set
             $manageableOwnerIds = Room::whereIn('id', $manageableRoomIds)->pluck('owner_id')->unique();
-            $owners = Owner::with('contact')->whereIn('id', $manageableOwnerIds)->get();
+            $owners = Owner::with('contact')->whereIn('id', $manageableOwnerIds)->get()
+                ->sortBy(fn ($o) => $o->contact?->display_name())->values();
         } else {
             // "available" view: all rooms accessible to the user (public + private with access)
-            $query = Room::with(['owner.contact', 'discounts', 'options', 'images'])
-                ->where('active', true)
-                ->where(function ($q) use ($user) {
-                    // Public rooms are always visible
-                    $q->where('is_public', true);
-
-                    // Add private rooms the user can access
-                    if ($user) {
-                        $accessibleOwnerIds = $user->getOwnerIdsWithAnyRole();
-                        $directRoomIds = $user->rooms()->pluck('rooms.id');
-
-                        $q->orWhere(function ($q2) use ($accessibleOwnerIds, $directRoomIds) {
-                            $q2->where('is_public', false)
-                                ->where(function ($q3) use ($accessibleOwnerIds, $directRoomIds) {
-                                    $q3->whereIn('owner_id', $accessibleOwnerIds)
-                                        ->orWhereIn('id', $directRoomIds);
-                                });
-                        });
-                    }
-                });
-
-            // Owners for filter: those with public active rooms + those with private rooms user can access
-            $ownersQuery = Owner::with('contact')
-                ->whereHas('rooms', function ($q) {
-                    $q->where('active', true)->where('is_public', true);
-                });
-
             if ($user) {
-                $accessibleOwnerIds = $user->getOwnerIdsWithAnyRole();
-                $directRoomOwnerIds = Room::whereIn('id', $user->rooms()->pluck('rooms.id'))
-                    ->pluck('owner_id');
-
-                $privateAccessOwnerIds = $accessibleOwnerIds->merge($directRoomOwnerIds)->unique();
-
-                $ownersQuery->orWhereIn('id', $privateAccessOwnerIds);
+                $accessibleRoomIds = $user->getAccessibleRoomIds(UserRole::VIEWER);
+            } else {
+                $accessibleRoomIds = Room::where('active', true)->where('is_public', true)->pluck('id');
             }
 
-            $owners = $ownersQuery->get();
+            $query = Room::with(['owner.contact', 'discounts', 'options', 'images'])
+                ->where('active', true)
+                ->whereIn('id', $accessibleRoomIds);
+
+            // Owners for filter: those with rooms in the accessible set
+            $accessibleOwnerIds = Room::where('active', true)->whereIn('id', $accessibleRoomIds)->pluck('owner_id')->unique();
+            $owners = Owner::with('contact')->whereIn('id', $accessibleOwnerIds)->get()
+                ->sortBy(fn ($o) => $o->contact?->display_name())->values();
         }
 
         // Filter by owner
@@ -123,7 +100,8 @@ class RoomController extends Controller
 
         // Get owners where user has admin rights
         $ownerIds = $user->getOwnerIdsWithMinUserRole(UserRole::ADMIN);
-        $owners = Owner::with('contact')->whereIn('id', $ownerIds)->get();
+        $owners = Owner::with('contact')->whereIn('id', $ownerIds)->get()
+            ->sortBy(fn ($o) => $o->contact?->display_name())->values();
 
         // Get owner timezones for JavaScript
         $ownerTimezones = $owners->mapWithKeys(function ($owner) {

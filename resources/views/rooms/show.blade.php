@@ -6,6 +6,14 @@
 <div class="max-w-7xl mx-auto py-6">
     <div class="page-header">
         <h1 class="page-header-title">{{ $room->name }}</h1>
+        @if(!$room->is_public)
+            <span class="tooltip-container tooltip-right ml-2">
+                <i class="fa-solid fa-user-lock text-xl"></i>
+                <span class="tooltip-content">
+                    {{ __('Private') }}
+                </span>
+            </span>
+        @endif
         @can('update', $room->owner)
             <a href="{{ route('owners.edit', $room->owner) }}">
                 <p class="mt-2 text-sm text-gray-600">{{ $room->owner->contact->display_name() }}</p>
@@ -19,11 +27,11 @@
                 {{ __('Back to rooms') }}
             </a>
             <span class="page-submenu-separator"></span>
-            @can('reserve', $room)
+            @if($room->active && auth()->user()?->can('reserve', $room))
                 <a href="{{ route('reservations.create', $room) }}" class="page-submenu-item page-submenu-action">
                     {{ __('Reserve this room') }}
                 </a>
-            @endcan
+            @endif
             @can('update', $room)
                 <span class="page-submenu-separator"></span>
                 <a href="{{ route('room-discounts.index', ['room_id'=>$room->id]) }}"

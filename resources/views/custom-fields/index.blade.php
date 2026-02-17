@@ -101,7 +101,7 @@
                         </td>
                         <td class="px-4 py-3">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $field->active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ $field->active ? __('Active') : __('Inactive') }}
+                                {{ $field->active ? __('Active_cf') : __('Inactive_cf') }}
                             </span>
                         </td>
                         <td class="px-4 py-3 text-sm font-medium">

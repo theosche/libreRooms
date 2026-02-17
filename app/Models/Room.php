@@ -149,7 +149,8 @@ class Room extends Model
     {
         return $this->belongsToMany(User::class)
             ->withPivot('role')
-            ->withTimestamps();
+            ->withTimestamps()
+            ->orderBy('name');
     }
 
     public function shortPriceRuleLabel()

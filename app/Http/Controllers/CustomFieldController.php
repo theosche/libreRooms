@@ -36,7 +36,7 @@ class CustomFieldController extends Controller
             $query->where('room_id', $currentRoomId);
         }
 
-        $query->orderBy('room_id', 'asc')->orderBy('label', 'asc');
+        $query->orderBy(Room::select('name')->whereColumn('rooms.id', 'custom_fields.room_id'))->orderBy('label', 'asc');
         $customFields = $query->paginate(15)->appends($request->except('page'));
 
         // Get available rooms for filters

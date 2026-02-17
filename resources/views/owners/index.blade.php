@@ -43,7 +43,6 @@
                             $role = \App\Enums\UserRole::tryFrom($u->pivot->role);
                             return $role && $role->hasAtLeast(\App\Enums\UserRole::MODERATOR);
                         });
-                        $otherAdminsAndMods = $adminsAndModerators->where('id', '!=', $user->id);
                     @endphp
                     <tr class="hover:bg-gray-50 cursor-pointer transition" onclick="toggleDetails({{ $owner->id }})">
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">
@@ -68,7 +67,7 @@
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-700">
                             @if($owner->rooms->count() > 0)
-                                <div class="flex flex-wrap gap-1">
+                                <div class="flex flex-wrap gap-2">
                                     @foreach($owner->rooms as $room)
                                         <a href="{{ route('rooms.show', $room) }}" onclick="event.stopPropagation()"><span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                                             {{ $room->name }}
@@ -80,14 +79,14 @@
                             @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-700">
-                            @if($otherAdminsAndMods->count() > 0)
-                                <div class="flex flex-wrap gap-1">
-                                    @foreach($otherAdminsAndMods as $adminMod)
+                            @if($adminsAndModerators->count() > 0)
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($adminsAndModerators as $adminMod)
                                         @php
                                             $role = \App\Enums\UserRole::tryFrom($adminMod->pivot->role);
                                             $badgeColor = match($role) {
-                                                \App\Enums\UserRole::ADMIN => 'bg-red-100 text-red-700',
-                                                \App\Enums\UserRole::MODERATOR => 'bg-yellow-100 text-yellow-700',
+                                                \App\Enums\UserRole::ADMIN => 'bg-gray-500 text-gray-100',
+                                                \App\Enums\UserRole::MODERATOR => 'bg-gray-100 text-gray-700',
                                                 default => 'bg-gray-100 text-gray-700',
                                             };
                                         @endphp
@@ -97,7 +96,7 @@
                                                 {{ $adminMod->name }}
                                             </span></a>
                                         @else
-                                            <span class="px-2 py-1 {{ $badgeColor }} text-xs rounded">
+                                            <span class="px-2 py-1 my-2 {{ $badgeColor }} text-xs rounded">
                                                 {{ $adminMod->name }}
                                             </span>
                                         @endif

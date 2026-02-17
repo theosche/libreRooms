@@ -35,7 +35,7 @@ class RoomOptionController extends Controller
             $query->where('room_id', $currentRoomId);
         }
 
-        $query->orderBy('room_id', 'asc')->orderBy('name', 'asc');
+        $query->orderBy(Room::select('name')->whereColumn('rooms.id', 'room_options.room_id'))->orderBy('name', 'asc');
         $options = $query->paginate(15)->appends($request->except('page'));
 
         // Get available rooms for filters

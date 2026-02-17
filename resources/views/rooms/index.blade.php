@@ -95,13 +95,8 @@
                             @if($view === 'mine')
                                 <div class="absolute top-2 left-2 flex gap-1">
                                     <span class="px-2 py-0.5 text-xs font-semibold rounded-full {{ $room->active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                        {{ $room->active ? __('Active') : __('Inactive') }}
+                                        {{ $room->active ? __('Active_room') : __('Inactive_room') }}
                                     </span>
-                                    @if(!$room->is_public)
-                                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                            {{ __('Private') }}
-                                        </span>
-                                    @endif
                                 </div>
                             @endif
 
@@ -113,6 +108,14 @@
                                 <a href="{{ route('rooms.show', $room) }}">
                                 {{ $room->name }}
                                 </a>
+                                @if(!$room->is_public)
+                                    <span class="tooltip-container tooltip-right">
+                                        <i class="fa-solid fa-user-lock text-sm"></i>
+                                        <span class="tooltip-content">
+                                            {{ __('Private') }}
+                                        </span>
+                                    </span>
+                                @endif
                                 @if($room->hasAddress())
                                     <span class="tooltip-container tooltip-right">
                                         <x-icons.location-dot class="w-4 h-4 text-gray-400"/>
@@ -146,11 +149,11 @@
                                     <a href="{{ route('rooms.show', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">
                                         <x-action-icon action="view" />
                                     </a>
-                                    @can('reserve', $room)
+                                    @if($room->active && $user?->can('reserve', $room))
                                         <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
                                             <x-action-icon action="book" />
                                         </a>
-                                    @endcan
+                                    @endif
                                     @can('manageUsers', $room)
                                         <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
                                             <x-action-icon action="users" />
@@ -193,6 +196,8 @@
                         <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hide-on-mobile">
                             {{ __('Description') }}
                         </th>
+                        <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        </th>
                         @if($view === 'mine')
                             <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 {{ __('Status') }}
@@ -226,17 +231,22 @@
                             <td class="px-4 py-3 text-sm text-gray-700 hide-on-mobile">
                                 {{ Str::limit($room->description, 100) }}
                             </td>
+                            <td class="px-4 py-3 text-sm text-gray-700">
+                                @if(!$room->is_public)
+                                    <span class="tooltip-container tooltip-right">
+                                        <i class="fa-solid fa-user-lock text-sm"></i>
+                                        <span class="tooltip-content">
+                                            {{ __('Private') }}
+                                        </span>
+                                    </span>
+                                @endif
+                            </td>
                             @if($view === 'mine')
                                 <td class="px-4 py-3">
                                     <div class="flex gap-1 flex-wrap">
                                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $room->active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                            {{ $room->active ? __('Active') : __('Inactive') }}
+                                            {{ $room->active ? __('Active_room') : __('Inactive_room') }}
                                         </span>
-                                        @if(!$room->is_public)
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                                {{ __('Private') }}
-                                            </span>
-                                        @endif
                                     </div>
                                 </td>
                             @endif
@@ -245,11 +255,11 @@
                                     <a href="{{ route('rooms.show', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">
                                         <x-action-icon action="view" />
                                     </a>
-                                    @can('reserve', $room)
+                                    @if($room->active && $user?->can('reserve', $room))
                                         <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
                                             <x-action-icon action="book" />
                                         </a>
-                                    @endcan
+                                    @endif
                                     @can('manageUsers', $room)
                                         <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
                                             <x-action-icon action="users" />

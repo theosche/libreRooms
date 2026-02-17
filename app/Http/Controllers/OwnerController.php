@@ -34,7 +34,7 @@ class OwnerController extends Controller
         $query = Owner::with(['contact', 'users', 'rooms'])
             ->whereIn('id', $ownerIds);
 
-        $owners = $query->orderBy('id', 'asc')->paginate(15);
+        $owners = $query->orderByRaw("(SELECT CASE WHEN type = 'organization' THEN entity_name ELSE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) END FROM contacts WHERE contacts.id = owners.contact_id) ASC")->paginate(15);
 
         return view('owners.index', [
             'owners' => $owners,
@@ -53,6 +53,7 @@ class OwnerController extends Controller
         $systemSettings = app(SystemSettings::class);
         $settingsService = app(SettingsService::class);
         $contacts = $user->is_global_admin ? Contact::all() : $user->contacts;
+        $contacts = $contacts->sortBy(fn ($c) => $c->display_name())->values();
 
         if ($contacts->isEmpty()) {
             return redirect()->route('contacts.create')->with('error', __('Cannot create owner: owners must be associated with a contact. Please create a contact first.'));

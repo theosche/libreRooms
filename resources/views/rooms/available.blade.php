@@ -205,11 +205,11 @@
                 <a href="{{ route('rooms.show', $room) }}" class="btn btn-primary">
                     {{ __('More info') }}
                 </a>
-                @can('reserve', $room)
+                @if($room->active && auth()->user()?->can('reserve', $room))
                     <a href="{{ route('reservations.create', $room) }}" class="btn btn-secondary">
                         {{ __('Book this room') }}
                     </a>
-                @endcan
+                @endif
             </div>
         </div>
     </div>

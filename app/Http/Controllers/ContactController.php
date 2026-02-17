@@ -34,8 +34,7 @@ class ContactController extends Controller
             if ($user->is_global_admin) {
                 // Global admin: show all contacts
                 $contacts = Contact::with('users')
-                    ->orderBy('entity_name', 'asc')
-                    ->orderBy('last_name', 'asc')
+                    ->orderByRaw("CASE WHEN type = 'organization' THEN entity_name ELSE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) END ASC")
                     ->paginate(15)
                     ->appends($request->except('page'));
             } else {
@@ -54,8 +53,7 @@ class ContactController extends Controller
                                     ->distinct();
                             });
                     })
-                    ->orderBy('entity_name', 'asc')
-                    ->orderBy('last_name', 'asc')
+                    ->orderByRaw("CASE WHEN type = 'organization' THEN entity_name ELSE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) END ASC")
                     ->paginate(15)
                     ->appends($request->except('page'));
             }
@@ -63,8 +61,7 @@ class ContactController extends Controller
             // Regular view: user's contacts only
             $contacts = $user->contacts()
                 ->with('users')
-                ->orderBy('entity_name', 'asc')
-                ->orderBy('last_name', 'asc')
+                ->orderByRaw("CASE WHEN type = 'organization' THEN entity_name ELSE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) END ASC")
                 ->paginate(15)
                 ->appends($request->except('page'));
         }

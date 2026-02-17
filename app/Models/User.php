@@ -249,6 +249,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Get all room IDs where user has at least the given effective role
      * (via owner role OR direct room role).
+     * When minRole is VIEWER, active public rooms are included.
      *
      * @return Collection<int, int>
      */
@@ -262,7 +263,14 @@ class User extends Authenticatable implements MustVerifyEmail
         $roomIdsFromOwners = Room::whereIn('owner_id', $ownerIds)->pluck('id');
         $directRoomIds = $this->getRoomIdsWithMinDirectRole($minRole);
 
-        return $roomIdsFromOwners->merge($directRoomIds)->unique()->values();
+        $ids = $roomIdsFromOwners->merge($directRoomIds);
+
+        if ($minRole === UserRole::VIEWER) {
+            $publicRoomIds = Room::where('active', true)->where('is_public', true)->pluck('id');
+            $ids = $ids->merge($publicRoomIds);
+        }
+
+        return $ids->unique()->values();
     }
 
     /**
