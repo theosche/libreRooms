@@ -134,7 +134,7 @@
 
         <!-- Sidebar -->
         <div class="space-y-6">
-            @can('manage', $room)
+            @can('manageReservations', $room)
                 <div class="flex items-center space-x-2 bg-white rounded-lg shadow p-6">
                     <a class="flex items-center space-x-2" href="{{ route('rooms.available', $room) }}">
                     <h3 class="text-lg font-semibold text-gray-900">{{ __('Live availability') }}</h3>
