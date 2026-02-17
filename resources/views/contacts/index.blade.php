@@ -7,10 +7,10 @@
     <div class="page-header">
         <h1 class="page-header-title">{{ __('Contacts') }}</h1>
 
-        @include('contacts._submenu', ['view' => $view, 'user' => $user])
+        @include('contacts._submenu', ['view' => $view, 'user' => $user, 'canViewAll' => $canViewAll])
 
         @if($view === 'all')
-            <p class="mt-2 text-sm text-gray-600">{{ __('List of all contacts in the system') }}</p>
+            <p class="mt-2 text-sm text-gray-600">{{ __('List of all accessible contacts') }}</p>
         @else
             <p class="mt-2 text-sm text-gray-600">{{ __('List of all your contacts') }}</p>
         @endif

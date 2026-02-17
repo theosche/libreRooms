@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ReservationStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Concerns\RedirectsBack;
 use App\Models\Contact;
+use App\Models\Room;
 use App\Models\User;
 use App\Validation\ContactRules;
 use Illuminate\Http\RedirectResponse;
@@ -18,27 +20,45 @@ class ContactController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * Two views available for global admins:
+     * Two views available:
      * - "mine": Contacts belonging to the user (default)
-     * - "all": All contacts in the system (global admin only)
+     * - "all": Own contacts + contacts with reservations on moderated rooms (moderators+)
      */
     public function index(Request $request)
     {
         $user = auth()->user();
-        $view = $request->input('view', 'mine');
-
-        // Only global admins can view all contacts
-        if ($view === 'all' && ! $user->is_global_admin) {
-            $view = 'mine';
-        }
+        $canViewAll = $user->can('viewAdmin', Room::class);
+        $view = $canViewAll ? $request->input('view', 'mine') : 'mine';
 
         if ($view === 'all') {
-            // Global admin: show all contacts
-            $contacts = Contact::with('users')
-                ->orderBy('entity_name', 'asc')
-                ->orderBy('last_name', 'asc')
-                ->paginate(15)
-                ->appends($request->except('page'));
+            if ($user->is_global_admin) {
+                // Global admin: show all contacts
+                $contacts = Contact::with('users')
+                    ->orderBy('entity_name', 'asc')
+                    ->orderBy('last_name', 'asc')
+                    ->paginate(15)
+                    ->appends($request->except('page'));
+            } else {
+                // Moderator: own contacts + contacts from reservations on accessible rooms
+                $roomIds = $user->getAccessibleRoomIds(UserRole::MODERATOR);
+
+                $contacts = Contact::with('users')
+                    ->where(function ($query) use ($user, $roomIds) {
+                        $query->whereHas('users', function ($q) use ($user) {
+                            $q->where('users.id', $user->id);
+                        })
+                            ->orWhereIn('id', function ($q) use ($roomIds) {
+                                $q->select('tenant_id')
+                                    ->from('reservations')
+                                    ->whereIn('room_id', $roomIds)
+                                    ->distinct();
+                            });
+                    })
+                    ->orderBy('entity_name', 'asc')
+                    ->orderBy('last_name', 'asc')
+                    ->paginate(15)
+                    ->appends($request->except('page'));
+            }
         } else {
             // Regular view: user's contacts only
             $contacts = $user->contacts()
@@ -53,6 +73,7 @@ class ContactController extends Controller
             'contacts' => $contacts,
             'user' => $user,
             'view' => $view,
+            'canViewAll' => $canViewAll,
         ]);
     }
 

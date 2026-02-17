@@ -1,4 +1,4 @@
-@if($user->is_global_admin)
+@if($canViewAll)
     <nav class="page-submenu">
         <a href="{{ route('contacts.index', ['view' => 'mine']) }}"
            class="page-submenu-item page-submenu-nav {{ ($view ?? 'mine') === 'mine' ? 'active' : '' }}">
