@@ -13,3 +13,6 @@ Schedule::command('reservations:finish-past')->hourly();
 
 // Schedule the command to send late invoices reminders to owners
 Schedule::command('invoices:send-late-reminders')->dailyAt('08:00');
+
+// Schedule the command to merge duplicate contacts
+Schedule::command('contacts:merge-identical --force')->dailyAt('03:00');
