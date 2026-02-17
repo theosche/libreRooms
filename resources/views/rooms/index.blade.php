@@ -145,10 +145,7 @@
                                 <a href="{{ route('rooms.show', $room) }}" class="btn btn-primary text-sm">
                                     {{ __('More info') }}
                                 </a>
-                                <div class="flex items-center justify-between gap-2">
-                                    <a href="{{ route('rooms.show', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">
-                                        <x-action-icon action="view" />
-                                    </a>
+                                <div class="flex items-center justify-between gap-2 text-2xl">
                                     @if($room->active && $user?->can('reserve', $room))
                                         <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
                                             <x-action-icon action="book" />
