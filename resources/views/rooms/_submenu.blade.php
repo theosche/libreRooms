@@ -1,11 +1,11 @@
 @can('viewAdmin', App\Models\Room::class)
     <nav class="page-submenu">
         {{-- Navigation items --}}
-        <a href="{{ route('rooms.index', ['view' => 'available', 'display' => request('display', 'cards')]) }}"
+        <a href="{{ route('rooms.index', ['view' => 'available', 'display' => request('display', 'cards'), ...request('owner_id') ? ['owner_id' => request('owner_id')] : []]) }}"
            class="page-submenu-item page-submenu-nav {{ request()->routeIs('rooms.index') && ($view ?? 'available') === 'available' ? 'active' : '' }}">
             {{ __('Available rooms') }}
         </a>
-        <a href="{{ route('rooms.index', ['view' => 'mine', 'display' => request('display', 'cards')]) }}"
+        <a href="{{ route('rooms.index', ['view' => 'mine', 'display' => request('display', 'cards'), ...request('owner_id') ? ['owner_id' => request('owner_id')] : []]) }}"
            class="page-submenu-item page-submenu-nav {{ request()->routeIs('rooms.index') && ($view ?? '') === 'mine' ? 'active' : '' }}">
             {{ __('My rooms') }}
         </a>
@@ -15,15 +15,15 @@
             <span class="page-submenu-separator"></span>
 
             {{-- Secondary navigation --}}
-            <a href="{{ route('room-discounts.index') }}"
+            <a href="{{ route('room-discounts.index', request('room_id') ? ['room_id' => request('room_id')] : []) }}"
                class="page-submenu-item page-submenu-secondary {{ request()->routeIs('room-discounts.*') ? 'active' : '' }}">
                 {{ __('Discounts') }}
             </a>
-            <a href="{{ route('room-options.index') }}"
+            <a href="{{ route('room-options.index', request('room_id') ? ['room_id' => request('room_id')] : []) }}"
                class="page-submenu-item page-submenu-secondary {{ request()->routeIs('room-options.*') ? 'active' : '' }}">
                 {{ __('Options') }}
             </a>
-            <a href="{{ route('custom-fields.index') }}"
+            <a href="{{ route('custom-fields.index', request('room_id') ? ['room_id' => request('room_id')] : []) }}"
                class="page-submenu-item page-submenu-secondary {{ request()->routeIs('custom-fields.*') ? 'active' : '' }}">
                 {{ __('Custom fields') }}
             </a>
@@ -32,7 +32,7 @@
             @cannot('viewAnyDiscounts', App\Models\Room::class)
                 <span class="page-submenu-separator"></span>
             @endcannot
-            <a href="{{ route('room-unavailabilities.index') }}"
+            <a href="{{ route('room-unavailabilities.index', request('room_id') ? ['room_id' => request('room_id')] : []) }}"
                class="page-submenu-item page-submenu-secondary {{ request()->routeIs('room-unavailabilities.*') ? 'active' : '' }}">
                 {{ __('Unavailabilities') }}
             </a>
