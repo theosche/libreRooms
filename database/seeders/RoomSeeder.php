@@ -9,6 +9,7 @@ use App\Models\RoomOption;
 use App\Models\CustomField;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 class RoomSeeder extends Seeder
 {
@@ -17,12 +18,17 @@ class RoomSeeder extends Seeder
      */
     public function run(): void
     {
-        Owner::all()->each(function ($owner) {
+        // Clean up images from previous seeds
+        Storage::disk('public')->deleteDirectory('rooms');
+
+        $seedImages = glob(database_path('seeders/data/room-images/*.jpg'));
+
+        Owner::all()->each(function ($owner) use ($seedImages) {
             Room::factory()
-                ->count(3)
+                ->count(4)
                 ->for($owner)
                 ->create()
-                ->each(function ($room) {
+                ->each(function ($room) use ($seedImages) {
                     RoomDiscount::factory()
                         ->count(rand(0, 3))
                         ->create(['room_id' => $room->id]);
@@ -41,21 +47,36 @@ class RoomSeeder extends Seeder
                             'role' => 'viewer',
                         ]);
                     });
+
+                    $this->attachRandomImages($room, $seedImages);
                 });
         });
-        $owner = Owner::first();
-        $room = Room::factory()
-            ->count(1)
-            ->for($owner)
-            ->create(['name' => 'test', 'slug' => 'test']);
-        RoomDiscount::factory()
-            ->count(5)
-            ->create(['room_id' => $room[0]->id]);
-        RoomOption::factory()
-            ->count(4)
-            ->create(['room_id' => $room[0]->id]);
-        CustomField::factory()
-            ->count(8)
-            ->create(['room_id' => $room[0]->id]);
+    }
+
+    /**
+     * Attach 1-3 random seed images to a room.
+     *
+     * @param array<string> $seedImages
+     */
+    private function attachRandomImages(Room $room, array $seedImages): void
+    {
+        if (empty($seedImages)) {
+            return;
+        }
+
+        $selected = collect($seedImages)->shuffle()->take(rand(1, 3));
+
+        $selected->each(function (string $sourcePath, int $index) use ($room) {
+            $filename = basename($sourcePath);
+            $storagePath = "rooms/{$room->id}/{$filename}";
+
+            Storage::disk('public')->put($storagePath, file_get_contents($sourcePath));
+
+            $room->images()->create([
+                'path' => $storagePath,
+                'original_name' => $filename,
+                'order' => $index,
+            ]);
+        });
     }
 }

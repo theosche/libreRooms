@@ -22,14 +22,18 @@ class RoomFactory extends Factory
      */
     public function definition(): array
     {
-        $name = 'Salle '.fake()->unique()->company();
+        $type = fake()->randomElement([
+            'Salle', 'Espace', 'Auditorium', 'Studio', 'Hall', 'Atelier'
+        ]);
+
+        $name = $type . ' ' . fake()->city();
         $price_short = fake()->optional(0.75)->numberBetween(10, 50);
 
         return [
             'owner_id' => Owner::factory(),
             'name' => $name,
-            'slug' => \Illuminate\Support\Str::slug($name),
-            'description' => fake()->optional()->paragraph(),
+            'slug' => \Illuminate\Support\Str::slug($name . fake()->unique()->numberBetween(1, 9999)),
+            'description' => fake()->paragraph(),
             'street' => fake()->streetAddress(),
             'postal_code' => fake()->postcode(),
             'city' => fake()->city(),

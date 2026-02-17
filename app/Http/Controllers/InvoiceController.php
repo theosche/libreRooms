@@ -61,7 +61,7 @@ class InvoiceController extends Controller
                     ->from('reservations')
                     ->whereIn('room_id', $roomIds)
                     ->distinct();
-            })->get();
+            })->get()->sortBy(fn ($c) => $c->display_name())->values();
         } else {
             // Get all contact IDs for the logged-in user
             $contactIds = $user->contacts()->pluck('contacts.id');
@@ -78,7 +78,7 @@ class InvoiceController extends Controller
                 ->orderBy('created_at', 'desc');
 
             // User's contacts for filter dropdown
-            $contacts = $user->contacts;
+            $contacts = $user->contacts->sortBy(fn ($c) => $c->display_name())->values();
         }
 
         // Apply filters
