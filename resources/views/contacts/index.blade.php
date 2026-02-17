@@ -124,7 +124,16 @@
                             @php
                                 $canManage = $userOwnsContact || $user->is_global_admin;
                             @endphp
+                            @php
+                                $linkedView = $view === 'all' ? 'admin' : 'mine';
+                            @endphp
                             <div class="action-group">
+                                <a href="{{ route('reservations.index', ['view' => $linkedView, 'tenant_id' => $contact->id]) }}" class="link-primary" title="{{ __('Reservations') }}">
+                                    <x-action-icon action="reservations" />
+                                </a>
+                                <a href="{{ route('invoices.index', ['view' => $linkedView, 'tenant_id' => $contact->id]) }}" class="link-primary" title="{{ __('Invoices') }}">
+                                    <x-action-icon action="invoices" />
+                                </a>
                                 @if($canManage)
                                     <a href="#" class="link-primary" title="{{ __('Share') }}" onclick="event.preventDefault(); showShareModal({{ $contact->id }}, '{{ addslashes($contact->display_name()) }}')">
                                         <x-action-icon action="share" />

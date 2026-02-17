@@ -111,7 +111,7 @@
                     @endphp
                     <tr class="hover:bg-gray-50 cursor-pointer transition" onclick="toggleDetails({{ $reservation->id }})">
                         <td class="px-4 py-3 text-sm font-medium text-gray-900">
-                            #{{ $reservation->id }}
+                            <a href="{{ route('reservations.show', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">#{{ $reservation->id }}</a>
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-900">
                             <a href="{{ route('rooms.show', $reservation->room) }}" onclick="event.stopPropagation()">
@@ -160,15 +160,9 @@
                         </td>
                         <td class="px-4 py-3 text-sm font-medium" onclick="event.stopPropagation()">
                             <div class="action-group">
-                                @if($isConfirmed || $isFinished)
-                                    <a href="{{ route('reservations.show', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}"><x-action-icon action="view" /></a>
-                                @endif
+                                <a href="{{ route('reservations.show', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}"><x-action-icon action="view" /></a>
                                 @if($canEdit)
-                                    @if($isPending && $canManage)
-                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-success" title="{{ __('Review') }}"><x-action-icon action="review" /></a>
-                                    @else
-                                        <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}"><x-action-icon action="edit" /></a>
-                                    @endif
+                                    <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="link-primary" title="{{ __('Edit') }}"><x-action-icon action="edit" /></a>
                                 @endif
 
                                 @if($canCancel)

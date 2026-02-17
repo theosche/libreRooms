@@ -43,10 +43,10 @@ class AvailabilityService
         date_default_timezone_set($originalTimezone);
         // Find which UIDs correspond to reservation events in one query
         $uids = array_filter(array_column($icalEvents, 'UID'));
-        $uidToReservationHash = ReservationEvent::whereIn('reservation_events.uid', $uids)
+        $uidToReservationId = ReservationEvent::whereIn('reservation_events.uid', $uids)
             ->join('reservations', 'reservations.id', '=', 'reservation_events.reservation_id')
-            ->pluck('reservations.hash', 'reservation_events.uid');
-        $busySlots = array_map(function ($e) use ($timezone, $uidToReservationHash) {
+            ->pluck('reservations.id', 'reservation_events.uid');
+        $busySlots = array_map(function ($e) use ($timezone) {
             $slot = [
                 'start' => Carbon::instance($e['DTSTART'])->setTimezone(new DateTimeZone($timezone)),
                 'end' => Carbon::instance($e['DTEND'])->setTimezone(new DateTimeZone($timezone)),
@@ -54,9 +54,9 @@ class AvailabilityService
                 'title' => $e['SUMMARY'] ?? null,
                 'description' => $e['DESCRIPTION'] ?? null,
             ];
-            $slot['url'] = isset($uidToReservationHash[$e['UID']]) ?
-                route('reservations.prebook.pdf', $uidToReservationHash[$e['UID']])
-                : "";
+            $slot['url'] = isset($uidToReservationId[$e['UID']]) ?
+                route('reservations.show', $uidToReservationId[$e['UID']])
+                : '';
 
             return $slot;
         }, $icalEvents);
@@ -91,7 +91,7 @@ class AvailabilityService
                 'title' => $event->reservation->title,
                 'description' => $event->reservation->description,
                 'tenant' => $event->reservation->tenant->display_name(),
-                'url' => route('reservations.prebook.pdf', $event->reservation->hash)
+                'url' => route('reservations.show', $event->reservation),
             ];
         })->toArray();
     }

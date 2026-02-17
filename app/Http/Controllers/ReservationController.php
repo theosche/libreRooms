@@ -135,10 +135,6 @@ class ReservationController extends Controller
 
     public function show(Reservation $reservation): View|RedirectResponse
     {
-        if (! in_array($reservation->status, [ReservationStatus::CONFIRMED, ReservationStatus::FINISHED])) {
-            return redirect()->route('reservations.index')->with('error', __('This reservation cannot be viewed.'));
-        }
-
         $user = auth()->user();
         $room = $reservation->room;
 
@@ -286,6 +282,24 @@ class ReservationController extends Controller
             __('Reservation confirmed successfully.');
 
         return $this->redirectBack('reservations.index')->with('success', $msg);
+    }
+
+    /**
+     * Directly confirm a reservation without editing its data.
+     */
+    public function directConfirm(Request $request, Reservation $reservation, ReservationService $service): RedirectResponse
+    {
+        if (! $reservation->isEditable()) {
+            return $this->redirectBack('reservations.index')->with('error', __('Reservation cannot be confirmed.'));
+        }
+
+        if (! auth()->user()->can('manageReservations', $reservation->room)) {
+            abort(403);
+        }
+
+        $service->directConfirm($reservation, auth()->user(), $request->input('custom_message'));
+
+        return $this->redirectBack('reservations.index')->with('success', __('Reservation confirmed successfully.'));
     }
 
     /**

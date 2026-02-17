@@ -197,6 +197,37 @@ class ReservationService
     }
 
     /**
+     * Directly confirm a reservation without editing its data.
+     * Updates status, syncs CalDAV events, then delegates to confirm() for invoice/email.
+     */
+    public function directConfirm(Reservation $reservation, User $user, ?string $customMessage = null): Reservation
+    {
+        $room = $reservation->room;
+        $wasCancelled = $reservation->status === ReservationStatus::CANCELLED;
+
+        DB::transaction(function () use ($reservation, $room, $wasCancelled, $customMessage) {
+            $reservation->update([
+                'status' => ReservationStatus::CONFIRMED,
+                'custom_message' => $customMessage,
+            ]);
+
+            // Sync CalDAV events
+            if ($room->usesCaldav()) {
+                $this->caldav->connect($room);
+                foreach ($reservation->events as $event) {
+                    if ($wasCancelled) {
+                        $this->caldav->createEvent($event);
+                    } else {
+                        $this->caldav->updateOrCreateEvent($event);
+                    }
+                }
+            }
+        });
+
+        return $this->confirm($reservation, $user);
+    }
+
+    /**
      * Cancel a reservation.
      * Deletes CalDAV events and cancels associated invoice.
      */
@@ -491,7 +522,6 @@ class ReservationService
             $fullLabel = $optionsPricing['label']
                 ? $eventPricing['label'].' - '.$optionsPricing['label']
                 : $eventPricing['label'];
-            $fullLabel .= ' - '.currency($totalPrice, $room->owner);
 
             $fullPrice += $totalPrice;
 

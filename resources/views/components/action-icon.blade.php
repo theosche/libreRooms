@@ -14,6 +14,8 @@
         'users' => 'fa-solid fa-users',
         'review' => 'fa-solid fa-clipboard-check',
         'view' => 'fa-solid fa-eye',
+        'reservations' => 'fa-solid fa-list',
+        'invoices' => 'fa-solid fa-file-invoice',
     ];
 @endphp
 

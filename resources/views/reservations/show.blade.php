@@ -1,12 +1,18 @@
 @extends('layouts.app')
 
-@section('title', '#' . $reservation->id . ' — ' . $reservation->title)
+@section('title', $reservation->title)
 
 @php
     $room = $reservation->room;
     $owner = $room->owner;
     $tenant = $reservation->tenant;
     $invoice = $reservation->invoice;
+    $canManage = $user->can('manageReservations', $reservation->room);
+    $isPending = $reservation->status === \App\Enums\ReservationStatus::PENDING;
+    $isConfirmed = $reservation->status === \App\Enums\ReservationStatus::CONFIRMED;
+    $canEdit = $reservation->isEditable();
+    $canCancel = $isPending || ($isConfirmed && $canManage);
+    $canConfirm = $canEdit && $canManage;
 @endphp
 
 @section('content')
@@ -16,9 +22,11 @@
         <div class="mt-2 flex items-center gap-3">
             <a href="{{ route('rooms.show', $room) }}" class="text-sm text-gray-600 hover:text-gray-900">{{ $room->name }}</a>
             <span class="px-2 whitespace-nowrap inline-flex text-xs leading-5 font-semibold rounded-full {{ match($reservation->status) {
+                \App\Enums\ReservationStatus::PENDING => 'bg-yellow-100 text-yellow-800',
                 \App\Enums\ReservationStatus::CONFIRMED => 'bg-green-100 text-green-800',
                 \App\Enums\ReservationStatus::FINISHED => 'bg-blue-100 text-blue-800',
-            } }}">
+                \App\Enums\ReservationStatus::CANCELLED => 'bg-red-100 text-red-800',
+                } }}">
                 {{ $reservation->status->label() }}
             </span>
         </div>
@@ -27,12 +35,6 @@
                class="page-submenu-item page-submenu-nav">
                 {{ __('Back to reservations') }}
             </a>
-            @if($reservation->isEditable())
-                <span class="page-submenu-separator"></span>
-                <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="page-submenu-item page-submenu-action">
-                    {{ __('Edit') }}
-                </a>
-            @endif
         </nav>
     </div>
 
@@ -62,18 +64,6 @@
                                     <span class="text-sm font-medium text-gray-900">{{ currency($event->price, $owner) }}</span>
                                 </div>
                             </div>
-                            @if($event->options->count() > 0)
-                                <div class="mt-2 pt-2 border-t border-gray-100">
-                                    <div class="flex flex-wrap gap-2">
-                                        @foreach($event->options as $option)
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
-                                                {{ $option->name }}
-                                                <span class="text-gray-500">({{ currency($option->pivot->price, $owner) }})</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -185,6 +175,30 @@
                     @endif
                 </div>
             </div>
+
+            <!-- Admin actions -->
+            @if($canCancel || $canEdit || $canConfirm)
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-yellow-800 mb-4">{{ __('Administration') }}</h3>
+                    <div class="space-y-2">
+                        @if($canEdit)
+                            <a href="{{ route('reservations.edit', [$reservation] + redirect_back_params()) }}" class="block w-full btn btn-secondary text-center">
+                                {{ __('Edit') }}
+                            </a>
+                        @endif
+                        @if($canConfirm)
+                            <button type="button" onclick="openConfirmModal()" class="block w-full btn btn-primary text-center">
+                                {{ __('Confirm request directly') }}
+                            </button>
+                        @endif
+                        @if($canCancel)
+                            <button type="button" onclick="openCancelModal()" class="block w-full btn btn-delete text-center">
+                                {{ __('Cancel reservation') }}
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- Sidebar -->
@@ -195,10 +209,10 @@
                 <div class="space-y-3">
                     @if($user->canAccessContact($tenant))
                         <a href="{{ route('contacts.edit', [$tenant] + redirect_back_params()) }}">
-                            <p class="text-sm font-medium text-gray-900">{{ $tenant->display_name() }}</p>
+                            <p class="inline-flex text-sm font-medium text-gray-900">{{ $tenant->display_name() }}</p>
                         </a>
                     @else
-                        <p class="text-sm font-medium text-gray-900">{{ $tenant->display_name() }}</p>
+                        <p class="inline-flex text-sm font-medium text-gray-900">{{ $tenant->display_name() }}</p>
                     @endif
 
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
@@ -242,7 +256,7 @@
                         <div class="flex justify-between">
                             <dt class="text-gray-500">{{ __('Number') }}</dt>
                             <dd class="text-gray-900 font-medium">
-                                <a href="{{ route('reservations.invoice.pdf', $reservation->hash) }}" target="_blank" class="hover:underline">
+                                <a href="{{ route('reservations.invoice.pdf', $reservation->hash) }}" target="_blank" class="link-primary">
                                     {{ $invoice->number }}
                                 </a>
                             </dd>
@@ -350,4 +364,138 @@
         </div>
     </div>
 </div>
+<!-- Modal de chargement -->
+<div id="loader-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-8 shadow-xl flex flex-col items-center gap-4">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+        <p class="text-gray-700 font-medium">{{ __('Processing...') }}</p>
+    </div>
+</div>
+
+@if($canConfirm)
+<!-- Modal de confirmation directe -->
+<div id="confirm-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">{{ __('Confirm request directly') }}</h3>
+        <form id="confirm-form" method="POST" action="{{ route('reservations.confirm', [$reservation] + redirect_back_params()) }}">
+            @csrf
+            <div class="mb-4">
+                <label for="confirm-custom-message" class="block text-sm font-medium text-gray-700 mb-1">
+                    {{ __('Custom message (sent by email with the reservation confirmation)') }}
+                </label>
+                <textarea name="custom_message"
+                          id="confirm-custom-message"
+                          class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                          rows="3"></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeConfirmModal()" class="btn btn-secondary">
+                    {{ __('Back') }}
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    {{ __('Confirm') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
+@if($canCancel)
+<!-- Modal d'annulation -->
+<div id="cancel-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">{{ __('Cancel reservation') }}</h3>
+        <form id="cancel-form" method="POST" action="{{ route('reservations.cancel', [$reservation] + redirect_back_params()) }}">
+            @csrf
+            <div class="mb-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="send_email" value="1" checked
+                           id="cancel-send-email"
+                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm text-gray-700">{{ __('Send cancellation email') }}</span>
+                </label>
+            </div>
+            <div class="mb-4">
+                <label for="cancel-reason" class="block text-sm font-medium text-gray-700 mb-1">
+                    {{ __('Cancellation reason (optional)') }}
+                </label>
+                <textarea name="cancellation_reason"
+                          id="cancel-reason"
+                          class="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+                          rows="3"
+                          placeholder="{{ __('Explain the reason for the cancellation...') }}"></textarea>
+                <p class="mt-1 text-xs text-gray-500">{{ __('This reason will be included in the cancellation email if the box above is checked.') }}</p>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeCancelModal()" class="btn btn-secondary">
+                    {{ __('Back') }}
+                </button>
+                <button type="submit" class="btn btn-delete">
+                    {{ __('Confirm cancellation') }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
+
+<script>
+    function showLoader() {
+        document.getElementById('loader-modal').classList.remove('hidden');
+    }
+
+    @if($canConfirm)
+    function openConfirmModal() {
+        document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+    function closeConfirmModal() {
+        document.getElementById('confirm-modal').classList.add('hidden');
+    }
+    document.getElementById('confirm-form').addEventListener('submit', function() {
+        closeConfirmModal();
+        showLoader();
+    });
+    document.getElementById('confirm-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeConfirmModal();
+    });
+    @endif
+
+    @if($canCancel)
+    function openCancelModal() {
+        document.getElementById('cancel-modal').classList.remove('hidden');
+        document.getElementById('cancel-reason').value = '';
+        document.getElementById('cancel-send-email').checked = true;
+        updateCancelReasonState();
+    }
+    function closeCancelModal() {
+        document.getElementById('cancel-modal').classList.add('hidden');
+    }
+    function updateCancelReasonState() {
+        const checkbox = document.getElementById('cancel-send-email');
+        const textarea = document.getElementById('cancel-reason');
+        textarea.disabled = !checkbox.checked;
+        textarea.classList.toggle('bg-gray-100', !checkbox.checked);
+    }
+    document.getElementById('cancel-send-email').addEventListener('change', updateCancelReasonState);
+    document.getElementById('cancel-form').addEventListener('submit', function() {
+        closeCancelModal();
+        showLoader();
+    });
+    document.getElementById('cancel-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeCancelModal();
+    });
+    @endif
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            @if($canConfirm)
+            closeConfirmModal();
+            @endif
+            @if($canCancel)
+            closeCancelModal();
+            @endif
+        }
+    });
+</script>
 @endsection
