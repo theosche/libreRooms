@@ -316,7 +316,7 @@
             <!-- Booking rules -->
             @if($room->reservation_cutoff_days || $room->reservation_advance_limit || !$room->openedEveryday() || $room->day_start_time || $room->day_end_time)
                 <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Booking conditions') }}</h3>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">{{ __('Booking rules') }}</h3>
                     <dl class="space-y-2 text-sm">
                         @if($room->reservation_cutoff_days)
                             <div class="flex justify-between">
