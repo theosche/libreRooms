@@ -291,9 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Update label based on mode
                 if (mode === 'text') {
-                    charterStrLabel.textContent = t.charter_content || 'Charter content';
+                    charterStrLabel.textContent = t.charter_content || 'Conditions';
                 } else if (mode === 'link') {
-                    charterStrLabel.textContent = t.charter_link || 'Charter link';
+                    charterStrLabel.textContent = t.charter_link || 'Conditions link';
                 }
 
                 // Add required asterisk

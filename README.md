@@ -16,7 +16,7 @@
 - Chaque propriétaire peut avoir plusieurs utilisateurs: lecteurs (peuvent voir les salles privées), modérateurs (peuvent gérer les réservations), administrateurs (peuvent créer/modifier des salles, modifier le propriétaire)
 
 ### Salles
-- Création facile de salles, avec plusieurs possibilités de personnalisation (présentation, localisation, images, charte)
+- Création facile de salles, avec plusieurs possibilités de personnalisation (présentation, localisation, images, conditions)
 - Page de liste des salles et page de présentation des salles
 - Tarification paramétrable (réservation courte, journée entière), possibilité de définir un fonctionnement à prix libre
 - Fonctionnalité "secret" pour transmettre des codes d'accès avec un lien valable pour une durée limitée
@@ -137,7 +137,7 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 - Each owner can have multiple users: viewers (can see private rooms), moderators (can manage bookings), administrators (can create/edit rooms, edit the owner)
 
 ### Rooms
-- Easy room creation, with many customization options (description, location, images, charter)
+- Easy room creation, with many customization options (description, location, images, conditions)
 - Room listing page and room presentation page
 - Configurable pricing (short booking, full day), with the option to define a pay-what-you-want model
 - "Secret" feature to share access codes via a time-limited link

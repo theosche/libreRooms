@@ -7,8 +7,8 @@
     <script>
         window.translations = {
             max_hours_short: @json(__('Max hours for short reservation')),
-            charter_content: @json(__('Charter content')),
-            charter_link: @json(__('Charter link')),
+            charter_content: @json(__('Conditions')),
+            charter_link: @json(__('Conditions link')),
             secret_message: @json(__('Secret message')),
             default_settings: @json(__('Default settings')),
             delete_image: @json(__('Delete this image')),
@@ -603,11 +603,11 @@
 
             <!-- Charte -->
             <div class="form-group">
-                <h3 class="form-group-title">{{ __('Charter') }}</h3>
+                <h3 class="form-group-title">{{ __('Conditions') }}</h3>
 
                 <fieldset class="form-element">
                     <div class="form-field">
-                        <label for="charter_mode" class="form-element-title">{{ __('Charter type') }}</label>
+                        <label for="charter_mode" class="form-element-title">{{ __('Conditions display') }}</label>
                         <select name="charter_mode" id="charter_mode" required>
                             <option value="text" @selected(old('charter_mode', $room?->charter_mode?->value ?? 'text') == 'text')>{{ __('Text') }}</option>
                             <option value="link" @selected(old('charter_mode', $room?->charter_mode?->value) == 'link')>{{ __('Link') }}</option>
@@ -622,7 +622,7 @@
                 <fieldset class="form-element" id="charter_str_field">
                     <div class="form-field">
                         <label for="charter_str" class="form-element-title">
-                            <span id="charter_str_label">{{ __('Charter content') }}</span>
+                            <span id="charter_str_label">{{ __('Conditions') }}</span>
                         </label>
                         <textarea
                             id="charter_str"
