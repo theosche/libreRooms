@@ -70,7 +70,7 @@ class AvailabilityService
         $query = ReservationEvent::with(['reservation.tenant'])
             ->whereHas('reservation', function ($q) use ($room) {
                 $q->where('room_id', $room->id)
-                    ->where('status', ReservationStatus::CONFIRMED);
+                    ->whereIn('status', [ReservationStatus::CONFIRMED, ReservationStatus::PENDING]);
             });
 
         // Apply date filters if provided
@@ -84,11 +84,12 @@ class AvailabilityService
         $events = $query->get(['id', 'reservation_id', 'start', 'end', 'uid']);
 
         return $events->map(function (ReservationEvent $event) use ($timezone) {
+            $isConfirmed = $event->reservation->status === ReservationStatus::CONFIRMED;
             return [
                 'uid' => $event->uid,
                 'start' => $event->start->copy()->setTimezone($timezone),
                 'end' => $event->end->copy()->setTimezone($timezone),
-                'title' => $event->reservation->title,
+                'title' => $event->reservation->title . ' - ' . ($isConfirmed ? __('Confirmed') : __('Pending')),
                 'description' => $event->reservation->description,
                 'tenant' => $event->reservation->tenant->display_name(),
                 'url' => route('reservations.show', $event->reservation),
