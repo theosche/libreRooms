@@ -79,6 +79,11 @@ class Room extends Model
         'allowed_weekdays' => 'array',
     ];
 
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     public function openedEveryday(): bool
     {
         return count($this->allowed_weekdays) === 7;
