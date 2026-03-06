@@ -27,10 +27,13 @@
                 {{ __('Back to rooms') }}
             </a>
             <span class="page-submenu-separator"></span>
-            @if($room->active && auth()->user()?->can('reserve', $room))
-                <a href="{{ route('reservations.create', $room) }}" class="page-submenu-item page-submenu-action">
-                    {{ __('Reserve this room') }}
-                </a>
+            @if($room->active)
+                <!-- There is a bypass for global_admins in can directives, we need to check that the room is active -->
+                @can('reserve', $room)
+                    <a href="{{ route('reservations.create', $room) }}" class="page-submenu-item page-submenu-action">
+                        {{ __('Reserve this room') }}
+                    </a>
+                @endcan
             @endif
             @can('update', $room)
                 <span class="page-submenu-separator"></span>

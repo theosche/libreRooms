@@ -146,10 +146,13 @@
                                     {{ __('More info') }}
                                 </a>
                                 <div class="flex items-center justify-between gap-2 text-2xl">
-                                    @if($room->active && $user?->can('reserve', $room))
-                                        <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
-                                            <x-action-icon action="book" />
-                                        </a>
+                                    @if($room->active)
+                                        <!-- There is a bypass for global_admins in can directives, we need to check that the room is active -->
+                                        @can('reserve', $room)
+                                            <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
+                                                <x-action-icon action="book" />
+                                            </a>
+                                        @endcan
                                     @endif
                                     @can('manageUsers', $room)
                                         <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
@@ -252,10 +255,13 @@
                                     <a href="{{ route('rooms.show', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('View') }}">
                                         <x-action-icon action="view" />
                                     </a>
-                                    @if($room->active && $user?->can('reserve', $room))
-                                        <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
-                                            <x-action-icon action="book" />
-                                        </a>
+                                    @if($room->active)
+                                        <!-- There is a bypass for global_admins in can directives, we need to check that the room is active -->
+                                        @can('reserve', $room)
+                                            <a href="{{ route('reservations.create', [$room] + redirect_back_params()) }}" class="link-success" title="{{ __('Book this room') }}">
+                                                <x-action-icon action="book" />
+                                            </a>
+                                        @endcan
                                     @endif
                                     @can('manageUsers', $room)
                                         <a href="{{ route('rooms.users.index', [$room] + redirect_back_params()) }}" class="link-primary" title="{{ __('Users') }}">
