@@ -77,7 +77,7 @@
 ## Installation
 ### 1. Installer l'application
 ```bash
-git clone https://github.com/theosche/libre-rooms
+git clone https://github.com/theosche/libreRooms
 cd libreRooms
 ./install.sh
 ```
@@ -198,7 +198,7 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou un
 ## Installation
 ### 1. Install the application
 ```bash
-git clone https://github.com/theosche/libre-rooms
+git clone https://github.com/theosche/libreRooms
 cd libreRooms
 ./install.sh
 ```
