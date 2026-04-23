@@ -263,7 +263,7 @@ class ReservationController extends Controller
             __('New reservation created successfully - pending confirmation.') :
             __('New reservation confirmed successfully.');
 
-        return $this->redirectBack(auth()->user ? 'reservations.index' : 'rooms.index')->with('success', $msg);
+        return $this->redirectBack(auth()->user() ? 'reservations.index' : 'rooms.index')->with('success', $msg);
     }
 
     public function update(UpdateReservationRequest $request, Reservation $reservation, ReservationService $service): RedirectResponse
