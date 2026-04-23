@@ -118,7 +118,7 @@ class ReservationEventsValidator
             // Custom unavailability check (admin bypass, use UTC accessors)
             if (! $canManage) {
                 foreach ($unavailabilities as $unavailability) {
-                    if ($event['start']->lt($unavailability->end()) && $event['end']->gt($unavailability->start())) {
+                    if ($event['start']->lt($unavailability->end) && $event['end']->gt($unavailability->start)) {
                         $validator->errors()->add('events', __('Room unavailable during this period.'));
                         break;
                     }
