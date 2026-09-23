@@ -1,5 +1,6 @@
 @php
     $timezone = $room->getTimezone();
+    $useFreePrice = $room->price_mode == App\Enums\PriceModes::FREE;
 @endphp
 <table class="events-table">
     <thead>
@@ -7,7 +8,9 @@
             <th class="date-col">{{ __('Start') }}</th>
             <th class="date-col">{{ __('End') }}</th>
             <th>{{ __('Options') }}</th>
-            <th class="price-col">{{ __('Price') }}</th>
+            @if(!$useFreePrice)
+                <th class="price-col">{{ __('Price') }}</th>
+            @endif
         </tr>
     </thead>
     <tbody>
@@ -20,7 +23,9 @@
                 <td class="date-col">{{ $startInTimezone->format('d.m.Y - H:i') }}</td>
                 <td class="date-col">{{ $endInTimezone->format('d.m.Y - H:i') }}</td>
                 <td>{{ $event->price_label }}</td>
-                <td class="price-col">{{ currency($event->price, $owner) }}</td>
+                @if(!$useFreePrice)
+                   <td class="price-col">{{ currency($event->price, $owner) }}</td>
+                @endif
             </tr>
         @endforeach
     </tbody>

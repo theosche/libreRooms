@@ -6,7 +6,7 @@
 @endphp
 
 <div class="totals-section">
-    @if($hasDiscounts)
+    @if($hasDiscounts && !$useFreePrice)
     <table class="totals-table">
 
             <tr>
@@ -38,24 +38,20 @@
             @endif
         </table>
         <div style="height: 5mm;"></div>
-        @endif
+    @endif
 
-        @if($useFreePrice)
-        <table class="totals-table">
-            <tr>
-                <td class="label-col">{{ __('Total recommended rate') }}</td>
-                <td class="price-col">{{ currency($reservation->recommendedPrice(), $owner) }}</td>
-            </tr>
-            <tr class="total-row">
-                <td class="label-col">{{ __('Free rate') }}</td>
-                <td class="price-col">{{ currency($finalTotal, $owner) }}</td>
-            </tr>
-        @else
-        <table class="totals-table">
-            <tr class="total-row">
-                <td class="label-col">{{ __('Total (incl. VAT)') }}</td>
-                <td class="price-col">{{ currency($finalTotal, $owner) }}</td>
-            </tr>
-        </table>
-        @endif
+    @if($useFreePrice)
+    <table class="totals-table">
+        <tr class="total-row">
+            <td class="label-col">{{ __('Free rate') }}</td>
+            <td class="price-col">{{ currency($finalTotal, $owner) }}</td>
+        </tr>
+    @else
+    <table class="totals-table">
+        <tr class="total-row">
+            <td class="label-col">{{ __('Total (incl. VAT)') }}</td>
+            <td class="price-col">{{ currency($finalTotal, $owner) }}</td>
+        </tr>
+    </table>
+    @endif
 </div>
